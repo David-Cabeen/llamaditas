@@ -169,3 +169,7 @@ body.theater-fullscreen #cinema-fullscreen-container {
   object-fit: contain;
   background-color: #000;
 }
+
+.local-video-feed {
+  transform: scaleX(-1);
+}

@@ -14,6 +14,11 @@ class SyncWaveApp {
     this.activeMicId = "default";
     this.audioInputs = [];
     this.localScreenStream = null;
+    this.isChatOpen = false;
+    this.session = null;
+    this.username = null;
+    this.avatarUrl = null;
+    this.callStartTime = 0;
 
     this.init();
   }
@@ -841,6 +846,137 @@ class SyncWaveApp {
     window.webrtcManager.closeAll();
     window.supabaseP2P.leave();
     window.location.href = window.location.pathname;
+  }
+
+  async initAuth() {
+    if (!window.supabase) return;
+    const { data } = await window.supabase.auth.getSession();
+    if (data.session) {
+      this.session = data.session;
+      this.username = data.session.user.user_metadata.preferred_username || data.session.user.email.split("@")[0];
+      this.avatarUrl = data.session.user.user_metadata.avatar_url;
+      this.userName = this.username;
+      
+      const btn = document.getElementById("btn-login");
+      if (btn) btn.innerHTML = `<img src="${this.avatarUrl}" class="w-5 h-5 rounded-full"> <span>Logueado como ${this.username}</span>`;
+    }
+  }
+
+  async loginWithProvider() {
+    if (this.session) return;
+    await window.supabase.auth.signInWithOAuth({ provider: 'google' });
+  }
+
+  updateStat(statName, increment = 1) {
+    if (!this.session || !window.supabase) return;
+    window.supabase.rpc('increment_my_stat', { stat_column: statName, inc_val: increment })
+      .catch(() => console.warn("Stats API req failed"));
+  }
+
+  toggleChat() {
+    this.isChatOpen = !this.isChatOpen;
+    const sidebar = document.getElementById("chat-sidebar");
+    if (this.isChatOpen) {
+      sidebar.classList.remove("w-0", "opacity-0");
+      sidebar.classList.add("w-[300px]", "opacity-100");
+    } else {
+      sidebar.classList.add("w-0", "opacity-0");
+      sidebar.classList.remove("w-[300px]", "opacity-100");
+    }
+  }
+
+  sendChat() {
+    const input = document.getElementById("input-chat");
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Manejo del comando /msg (Mensaje Directo)
+    if (text.startsWith("/msg ")) {
+      if (!this.session) {
+        this.showToast("Solo los usuarios registrados pueden enviar mensajes privados.");
+        return;
+      }
+      const parts = text.split(" ");
+      const targetUsername = parts[1];
+      const actualMsg = parts.slice(2).join(" ");
+      
+      let targetPeerId = null;
+      for (const [pId, pData] of this.remotePeers.entries()) {
+        if (pData.username === targetUsername) {
+          targetPeerId = pId;
+          break;
+        }
+      }
+      if (targetPeerId) {
+        window.supabaseP2P.channel.send({
+          type: "broadcast", event: "chat",
+          payload: { from: this.peerId, target: targetPeerId, name: this.userName, avatar: this.avatarUrl, msg: actualMsg, isPrivate: true }
+        });
+        this.renderChatMessage(this.userName, actualMsg, this.avatarUrl, true, true);
+        this.updateStat('messages_sent');
+      } else {
+        this.showToast(`Usuario ${targetUsername} no encontrado.`);
+      }
+    } else {
+      window.supabaseP2P.channel.send({
+        type: "broadcast", event: "chat",
+        payload: { from: this.peerId, name: this.userName, avatar: this.avatarUrl, msg: text, isPrivate: false }
+      });
+      this.renderChatMessage(this.userName, text, this.avatarUrl, true, false);
+      this.updateStat('messages_sent');
+    }
+    input.value = "";
+  }
+
+  renderChatMessage(senderName, message, avatar, isMine, isPrivate) {
+    const container = document.getElementById("chat-messages-container");
+    const div = document.createElement("div");
+    const avatarSrc = avatar || `https://ui-avatars.com/api/?name=${senderName}&background=random`;
+    const privacyBadge = isPrivate ? `<span class="text-[9px] text-accent uppercase font-bold ml-1">Privado</span>` : '';
+    
+    div.className = `flex gap-2 ${isMine ? "flex-row-reverse" : ""}`;
+    div.innerHTML = `
+      <img src="${avatarSrc}" class="w-7 h-7 rounded-full flex-shrink-0 mt-1 object-cover">
+      <div class="flex flex-col ${isMine ? "items-end" : "items-start"} max-w-[80%]">
+        <div class="flex items-center gap-1 mb-0.5">
+          <span class="text-[10px] text-gray-400 font-medium">${senderName}</span>
+          ${privacyBadge}
+        </div>
+        <div class="px-3 py-2 rounded-xl text-xs ${isMine ? "bg-accent text-white" : "bg-white/10 text-gray-200"} border ${isPrivate ? "border-accent shadow-[0_0_8px_rgba(139,92,246,0.5)]" : "border-white/5"}">
+          ${message}
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  showChatToast(senderName, message, avatar, isPrivate) {
+    if (this.isChatOpen) return; // Si el chat está abierto, no molestamos con toasts
+    const container = document.getElementById("chat-toast-container");
+    const toast = document.createElement("div");
+    const avatarSrc = avatar || `https://ui-avatars.com/api/?name=${senderName}&background=random`;
+    
+    toast.className = `glass border ${isPrivate ? "border-accent" : "border-white/15"} px-3 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-4 max-w-[280px]`;
+    toast.innerHTML = `
+      <img src="${avatarSrc}" class="w-8 h-8 rounded-full object-cover">
+      <div class="min-w-0 flex-1">
+        <p class="text-[10px] font-bold text-white uppercase tracking-wide truncate">${senderName} ${isPrivate ? '<span class="text-accent">(Susurro)</span>' : ''}</p>
+        <p class="text-xs text-gray-300 truncate">${message}</p>
+      </div>
+    `;
+    container.appendChild(toast);
+    
+    requestAnimationFrame(() => {
+      toast.classList.remove("opacity-0", "translate-y-4");
+      toast.classList.add("opacity-100", "translate-y-0");
+    });
+
+    setTimeout(() => {
+      toast.classList.remove("opacity-100", "translate-y-0");
+      toast.classList.add("opacity-0", "translate-y-4");
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
   }
 
   updateConnectionStatus(connected, customText = null) {

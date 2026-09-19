@@ -165,15 +165,19 @@ class AudioMixer {
     }
   }
 
-  setMusicVolume(volumePercent) {
+    setMusicVolume(volumePercent) {
     const vol = Math.max(0, Math.min(100, parseInt(volumePercent, 10)));
     this.musicVolume = vol;
     localStorage.setItem("syncwave_music_vol", vol.toString());
-    if (window.ytSync) {
-      window.ytSync.setVolume(vol);
+    
+    if (window.ytSync && window.ytSync.player) {
+       const linear = vol / 100;
+       const logVol = linear === 0 ? 0 : Math.round(Math.pow(linear, 2) * 100);
+       window.ytSync.player.setVolume(logVol);
     }
     return vol;
   }
+  
 
   getMusicVolume() {
     return this.musicVolume;

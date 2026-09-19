@@ -60,6 +60,15 @@ class SupabaseP2P {
         }
       });
 
+      await this.channel.track({
+        name: this.userName,
+        real_username: window.syncApp.username,
+        avatar_url: window.syncApp.avatarUrl,
+        mic: true,
+        cam: false,
+        joinedAt: Date.now()
+      });
+
       // 1. Peer Announce
       this.channel.on("broadcast", { event: "peer-announce" }, ({ payload }) => {
         if (payload && payload.from !== this.peerId) {
@@ -134,6 +143,15 @@ class SupabaseP2P {
       this.channel.on("presence", { event: "leave" }, ({ key }) => {
         if (key !== this.peerId) {
           onPeerLeave(key);
+        }
+      });
+
+      this.channel.on("broadcast", { event: "chat" }, ({ payload }) => {
+        if (payload.isPrivate && payload.target !== this.peerId) return;
+        
+        if (window.syncApp) {
+          window.syncApp.renderChatMessage(payload.name, payload.msg, payload.avatar, false, payload.isPrivate);
+          window.syncApp.showChatToast(payload.name, payload.msg, payload.avatar, payload.isPrivate);
         }
       });
 
