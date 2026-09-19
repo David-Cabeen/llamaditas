@@ -2,11 +2,13 @@
 class AudioMixer {
   constructor() {
     this.audioCtx = null;
-    this.peerTracks = new Map(); // peerId -> { stream, sourceNode, gainNode, analyser, volume, isMuted }
+    this.peerTracks = new Map();
     this.localAnalyser = null;
+    this.localMicSource = null;
+    this.localMonitorGain = null; // Nodo para el loopback
     this.musicVolume = parseInt(localStorage.getItem("syncwave_music_vol") || "70", 10);
-    this.onSpeakerChange = null; // callback(peerId, isSpeaking)
-    this.onLocalMicActivity = null; // callback(level)
+    this.onSpeakerChange = null; 
+    this.onLocalMicActivity = null; 
     this.monitorInterval = null;
     this.mixedDestination = null;
   }
@@ -24,7 +26,6 @@ class AudioMixer {
     }
   }
 
-  // Create mixed stream of microphone + screen sharing system audio
   createMixedStream(micStream, screenStream) {
     this.ensureContext();
     this.mixedDestination = this.audioCtx.createMediaStreamDestination();
@@ -50,16 +51,12 @@ class AudioMixer {
     return this.mixedDestination.stream.getAudioTracks()[0];
   }
 
-  // Register remote peer audio stream
   attachPeerStream(peerId, stream) {
     this.ensureContext();
     this.detachPeerStream(peerId);
 
     const audioTrack = stream.getAudioTracks()[0];
-    if (!audioTrack) {
-      console.warn(`No audio track found for peer ${peerId}`);
-      return;
-    }
+    if (!audioTrack) return;
 
     try {
       const audioStream = new MediaStream([audioTrack]);
@@ -72,21 +69,11 @@ class AudioMixer {
       const linear = savedVol / 100;
       gainNode.gain.value = linear === 0 ? 0 : Math.pow(linear, 2);
 
-      // Connect graph: Source -> Analyser -> Gain -> Speakers
       sourceNode.connect(analyser);
       analyser.connect(gainNode);
       gainNode.connect(this.audioCtx.destination);
 
-      this.peerTracks.set(peerId, {
-        stream,
-        sourceNode,
-        gainNode,
-        analyser,
-        volume: savedVol,
-        isMuted: false
-      });
-
-      console.log(`[Mixer] Attached peer audio stream for ${peerId} (Vol: ${savedVol}%)`);
+      this.peerTracks.set(peerId, { stream, sourceNode, gainNode, analyser, volume: savedVol, isMuted: false });
     } catch (err) {
       console.error(`[Mixer] Error routing peer stream:`, err);
     }
@@ -145,13 +132,36 @@ class AudioMixer {
     if (!audioTrack) return;
 
     try {
+      if (this.localMicSource) {
+        this.localMicSource.disconnect();
+      }
+
       const micStream = new MediaStream([audioTrack]);
-      const source = this.audioCtx.createMediaStreamSource(micStream);
+      this.localMicSource = this.audioCtx.createMediaStreamSource(micStream);
+      
       this.localAnalyser = this.audioCtx.createAnalyser();
       this.localAnalyser.fftSize = 256;
-      source.connect(this.localAnalyser);
+      this.localMicSource.connect(this.localAnalyser);
+
+      // Crear el nodo de monitoreo si no existe
+      if (!this.localMonitorGain) {
+        this.localMonitorGain = this.audioCtx.createGain();
+        this.localMonitorGain.gain.value = 0; // Apagado por defecto
+        this.localMonitorGain.connect(this.audioCtx.destination);
+      }
+      
+      // Conectar la entrada local al monitor (el volumen se controla en setLocalMonitor)
+      this.localMicSource.connect(this.localMonitorGain);
     } catch (e) {
       console.warn("[Mixer] Error attaching local mic:", e);
+    }
+  }
+
+  // Activa o desactiva el Loopback para escuchar tu propia guitarra/voz
+  setLocalMonitor(enable) {
+    this.ensureContext();
+    if (this.localMonitorGain) {
+      this.localMonitorGain.gain.setTargetAtTime(enable ? 1 : 0, this.audioCtx.currentTime, 0.05);
     }
   }
 

@@ -136,6 +136,18 @@ class SyncWaveApp {
     }
   }
 
+  toggleOtgMode(checked) {
+    window.webrtcManager.setOtgMode(checked);
+    // Restart the mic capture to apply the raw audio constraints
+    window.webrtcManager.switchMicrophone(this.activeMicId);
+    this.showToast(checked ? "🎸 Modo OTG activado: Audio crudo sin compresión" : "🎙️ Procesamiento de voz estándar activado");
+  }
+
+  toggleLocalMonitor(checked) {
+    window.audioMixer.setLocalMonitor(checked);
+    this.showToast(checked ? "🎧 Retorno activado. ¡Usa audífonos para evitar eco!" : "Retorno de audio desactivado");
+  }
+
   async loadDevices() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
