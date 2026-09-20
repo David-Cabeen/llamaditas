@@ -865,10 +865,13 @@ class SyncWaveApp {
     await window.supabaseClient.auth.signInWithOAuth({ provider: 'google' });
   }
 
-  updateStat(statName, increment = 1) {
+  async updateStat(statName, increment = 1) {
     if (!this.session || !window.supabaseClient) return;
-    window.supabaseClient.rpc('increment_my_stat', { stat_column: statName, inc_val: increment })
-      .catch(() => console.warn("Stats API req failed"));
+    const { error } = await window.supabaseClient.rpc('increment_my_stat', { 
+      stat_column: statName, 
+      inc_val: increment 
+    });
+    if (error) console.warn("Stats API req failed", error);
   }
 
   toggleChat() {

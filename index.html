@@ -452,6 +452,32 @@
     <span id="toast-msg">Mensaje de notificación</span>
   </div>
 
+  <!-- 5. CHAT SIDEBAR & TOASTS -->
+  <aside id="chat-sidebar" class="fixed top-[60px] left-0 h-[calc(100vh-60px)] w-0 opacity-0 z-40 glass border-r border-white/10 shadow-2xl flex flex-col transition-all duration-300 ease-in-out overflow-hidden">
+    <div class="flex items-center justify-between border-b border-white/10 p-4">
+      <h3 class="font-bold text-white text-sm tracking-tight flex items-center gap-2">
+        <span>💬 Chat de la Sala</span>
+      </h3>
+      <button onclick="window.syncApp.toggleChat()" class="text-gray-400 hover:text-white p-1 rounded-lg transition">✕</button>
+    </div>
+
+    <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
+      <!-- Los mensajes aparecerán aquí -->
+    </div>
+
+    <div class="p-4 border-t border-white/10 bg-black/30">
+      <div class="flex gap-2">
+        <input type="text" id="input-chat" onkeypress="if(event.key === 'Enter') window.syncApp.sendChat()" placeholder="Mensaje o /msg [usuario]..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent transition">
+        <button onclick="window.syncApp.sendChat()" class="px-3 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenedor flotante para alertas de mensajes cerrados -->
+  <div id="chat-toast-container" class="fixed bottom-24 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
   <script src="./js/theme.js"></script>
   <script src="./js/audio_mixer.js"></script>
   <script src="./js/yt_sync.js"></script>
