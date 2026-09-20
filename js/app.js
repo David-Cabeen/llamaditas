@@ -900,19 +900,31 @@ class SyncWaveApp {
     document.getElementById("modal-profile").classList.add("hidden");
     document.getElementById("input-avatar-url").classList.add("hidden");
   }
-
   async updateProfilePicture() {
     const input = document.getElementById("avatar-url-field").value.trim();
-    if (input && window.supabaseClient) {
-      const { data, error } = await window.supabaseClient.auth.updateUser({
+    if (input && window.supabaseClient && this.session) {
+      
+      // 1. Update the Supabase Auth Metadata
+      const { error: authError } = await window.supabaseClient.auth.updateUser({
         data: { avatar_url: input }
       });
-      if (!error) {
+      
+      // 2. Update the public database record (CRITICAL FIX)
+      // Note: If your table is named 'profiles' instead of 'users', change it below
+      const { error: dbError } = await window.supabaseClient
+        .from('users') 
+        .update({ avatar_url: input })
+        .eq('id', this.session.user.id);
+
+      if (!authError && !dbError) {
         this.avatarUrl = input;
         document.getElementById("profile-modal-avatar").src = input;
         this.showToast("Foto de perfil actualizada.");
         document.getElementById("input-avatar-url").classList.add("hidden");
         this.updateCamPlaceholder(); 
+      } else {
+        console.error("Error updating avatar:", authError || dbError);
+        this.showToast("Hubo un error al guardar la imagen.");
       }
     }
   }
@@ -922,13 +934,20 @@ class SyncWaveApp {
     try {
       const { data, error } = await window.supabaseClient.rpc('get_my_stats');
       if (data && !error) {
-        this.stats.totalCalls = data.total_calls || 0;
-        this.stats.totalTimeSec = Math.floor((data.total_time_sec || 0) / 60);
-        this.stats.topFriendName = data.top_friend_name;
-        this.stats.topFriendAvatar = data.top_friend_avatar;
-        this.stats.topFriendLink = `/user/${data.top_friend_username || '#'}`;
+        // CRITICAL FIX: Extract the first row if the RPC returns an array
+        const stats = Array.isArray(data) ? data[0] : data;
+        
+        if (stats) {
+          this.stats.totalCalls = stats.total_calls || 0;
+          this.stats.totalTimeSec = Math.floor((stats.total_time_sec || 0) / 60);
+          this.stats.topFriendName = stats.top_friend_name;
+          this.stats.topFriendAvatar = stats.top_friend_avatar;
+          this.stats.topFriendLink = `/user/${stats.top_friend_username || '#'}`;
+        }
       }
-    } catch(e) { console.warn("Error cargando stats", e); }
+    } catch(e) { 
+      console.warn("Error cargando stats", e); 
+    }
   }
 
   async updateStat(statName, increment = 1) {
