@@ -64,7 +64,7 @@ class SyncWaveApp {
     };
 
     document.addEventListener("click", (e) => {
-      if (this.isMicDropdownOpen && !e.target.closest("#mic-selector-container")) {
+      if (this.isMicDropdownOpen && !e.target.closest("#mic-group")) {
         this.toggleMicDropdown(false);
       }
     });
@@ -75,8 +75,6 @@ class SyncWaveApp {
       this.positionTheaterPortal();
     });
   }
-
-  // =================== PWA INSTALLATION =====================
 
   initPwa() {
     window.addEventListener("beforeinstallprompt", (e) => {
@@ -104,8 +102,6 @@ class SyncWaveApp {
     const btns = document.querySelectorAll(".btn-install-pwa");
     btns.forEach(btn => btn.classList.add("hidden"));
   }
-
-  // ==========================================================
 
   generateRoomCode() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -174,8 +170,6 @@ class SyncWaveApp {
     }, 60000);
   }
 
-  // ============== CAMERA OFF DYNAMIC PLACEHOLDERS ==================
-
   updateCamPlaceholder() {
     const placeholder = document.getElementById("local-cam-off-placeholder");
     const videoFeed = document.querySelector(".local-video-feed");
@@ -194,7 +188,7 @@ class SyncWaveApp {
   }
 
   renderCamOffPlaceholder(container, avatar, idPrefix) {
-    if (avatar && this.session) {
+    if (avatar) {
       container.innerHTML = `
         <img src="${avatar}" id="${idPrefix}-img" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-2xl border-2 border-white/20 mb-3" crossorigin="anonymous">
         <p class="text-xs sm:text-sm font-semibold text-white">Cámara desactivada</p>
@@ -236,8 +230,6 @@ class SyncWaveApp {
     img.src = imgSrc;
   }
 
-  // =================================================================
-
   toggleMicDropdown(forceState) {
     this.isMicDropdownOpen = forceState !== undefined ? forceState : !this.isMicDropdownOpen;
     const menu = document.getElementById("mic-dropdown-menu");
@@ -267,7 +259,7 @@ class SyncWaveApp {
   }
 
   toggleLocalMonitor(checked) {
-    window.audioMixer.setLocalMonitor(checked);
+    if (window.webrtcManager.setLocalMonitor) window.webrtcManager.setLocalMonitor(checked);
     this.showToast(checked ? "🎧 Retorno activado. ¡Usa audífonos para evitar eco!" : "Retorno de audio desactivado");
   }
 
@@ -287,16 +279,18 @@ class SyncWaveApp {
     
     list.innerHTML = this.audioInputs.map(mic => {
       const isSelected = mic.deviceId === this.activeMicId || (this.activeMicId === "default" && mic.deviceId === "default");
-      const baseClass = "w-full text-left px-3 py-2.5 text-xs transition-colors flex items-center justify-between";
+      const baseClass = "w-full text-left px-3 py-2.5 text-xs transition-all flex items-center justify-between rounded-lg cursor-pointer";
+      
       const colorClass = isSelected 
-        ? "bg-accent/20 text-white font-medium" 
-        : "text-gray-400 hover:bg-white/10 hover:text-gray-100";
+        ? "bg-accent/20 text-white font-medium border border-accent shadow-[0_0_8px_rgba(139,92,246,0.3)]" 
+        : "text-gray-400 hover:bg-white/10 hover:text-gray-100 border border-transparent";
+        
       const indicator = isSelected 
         ? `<span class="w-2 h-2 rounded-full bg-accent flex-shrink-0 shadow-[0_0_8px_rgba(139,92,246,0.8)]"></span>` 
         : '';
 
       return `
-        <button onclick="window.syncApp.selectMicInput('${mic.deviceId}', '${mic.label.replace(/'/g, "\\'") || 'Micrófono desconocido'}')" 
+        <button onclick="window.syncApp.selectMicInput('${mic.deviceId}')" 
                 class="${baseClass} ${colorClass}">
           <span class="truncate pr-2">${mic.label || 'Micrófono predeterminado'}</span>
           ${indicator}
@@ -305,10 +299,8 @@ class SyncWaveApp {
     }).join('');
   }
 
-  selectMicInput(deviceId, label) {
+  selectMicInput(deviceId) {
     this.activeMicId = deviceId;
-    const labelEl = document.getElementById("mic-selector-label");
-    if (labelEl) labelEl.innerText = label;
     this.renderMicOptions(); 
     this.toggleMicDropdown(false); 
     window.webrtcManager.switchMicrophone(deviceId); 
@@ -329,7 +321,18 @@ class SyncWaveApp {
       this.userName,
       (peerId, info) => this.onPeerJoined(peerId, info),
       (peerId) => this.onPeerLeft(peerId),
-      (fromPeerId, signalType, payload) => window.webrtcManager.handleSignal(fromPeerId, signalType, payload),
+      (fromPeerId, signalType, payload) => {
+        if (signalType === "avatar-sync") {
+          if (this.remotePeers.has(fromPeerId)) {
+            const p = this.remotePeers.get(fromPeerId);
+            p.avatar_url = payload.avatar_url;
+            this.remotePeers.set(fromPeerId, p);
+            this.renderVideoTiles();
+          }
+        } else {
+          window.webrtcManager.handleSignal(fromPeerId, signalType, payload);
+        }
+      },
       (action, payload, fromPeerId) => this.handleMusicAction(action, payload, fromPeerId),
       (data) => this.handlePeerStateUpdate(data),
       (payload) => this.handleMusicStateSync(payload)
@@ -360,6 +363,10 @@ class SyncWaveApp {
     this.showToast(`${peerName} se unió a la llamada`);
     this.renderVideoTiles();
     this.renderMixerChannels();
+
+    if (this.avatarUrl) {
+      window.supabaseP2P.sendSignal(peerId, "avatar-sync", { avatar_url: this.avatarUrl });
+    }
   }
 
   onPeerLeft(peerId) {
@@ -673,18 +680,28 @@ class SyncWaveApp {
   toggleMic() {
     this.isMicOn = !this.isMicOn;
     window.webrtcManager.toggleAudio(this.isMicOn);
+    
+    const group = document.getElementById("mic-group");
     const btn = document.getElementById("btn-toggle-mic");
     const label = btn.querySelector(".label-mic");
     const icon = btn.querySelector(".icon-mic");
 
     if (this.isMicOn) {
-      btn.className = "flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition flex-1 sm:flex-initial";
+      group.className = "flex items-stretch rounded-xl bg-white/10 hover:bg-white/15 transition border border-transparent focus-within:border-white/20 flex-1 sm:flex-initial";
       if (label) label.innerText = "Micrófono activo";
-      if (icon) icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>`;
+      if (icon) {
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>`;
+        icon.classList.add("text-emerald-400");
+        icon.classList.remove("text-red-400");
+      }
     } else {
-      btn.className = "flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition flex-1 sm:flex-initial";
+      group.className = "flex items-stretch rounded-xl bg-red-500/20 border border-red-500/40 transition flex-1 sm:flex-initial";
       if (label) label.innerText = "Micrófono apagado";
-      if (icon) icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>`;
+      if (icon) {
+        icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>`;
+        icon.classList.remove("text-emerald-400");
+        icon.classList.add("text-red-400");
+      }
     }
     if (this.isUsingSupabase) window.supabaseP2P.sendUserState(this.isMicOn, this.isCamOn, false);
   }
@@ -864,8 +881,6 @@ class SyncWaveApp {
     window.location.href = window.location.pathname;
   }
 
-  // =================== AUTHENTICATION Y PERFIL =====================
-
   async initAuth() {
     if (!window.supabaseClient) return;
     const { data } = await window.supabaseClient.auth.getSession();
@@ -996,8 +1011,6 @@ class SyncWaveApp {
     });
     if (error) console.warn("Stats API req failed", error);
   }
-
-  // =================== CHAT Y TOASTS =====================
 
   toggleChat() {
     this.isChatOpen = !this.isChatOpen;

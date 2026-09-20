@@ -212,34 +212,40 @@
           <div class="glass rounded-2xl p-2.5 sm:p-3 border border-white/10 flex flex-wrap items-center justify-between gap-2 glow-subtle">
             <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1">
               
-              <!-- Mic Toggle Button -->
-              <button id="btn-toggle-mic" onclick="window.syncApp.toggleMic()" class="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition flex-1 sm:flex-initial">
-                <svg class="w-4 h-4 text-emerald-400 icon-mic flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
-                <span class="label-mic hidden xs:inline">Micrófono activo</span>
-              </button>
-              
-              <!-- Custom Mic Dropdown -->
-              <div class="relative flex-1 sm:flex-initial" id="mic-selector-container">
-                <button onclick="window.syncApp.toggleMicDropdown()" class="flex items-center justify-between gap-2 bg-black/40 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2 text-xs text-gray-300 w-full sm:w-48 transition-all">
-                  <span id="mic-selector-label" class="truncate">Micrófono</span>
-                  <svg id="mic-selector-arrow" class="w-3.5 h-3.5 transition-transform duration-300 rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              <!-- Split Mic Button Group -->
+              <div class="flex items-stretch rounded-xl bg-white/10 hover:bg-white/15 transition border border-transparent focus-within:border-white/20 flex-1 sm:flex-initial" id="mic-group">
+                <!-- Main Mic Toggle -->
+                <button id="btn-toggle-mic" onclick="window.syncApp.toggleMic()" class="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 text-white text-xs font-medium transition flex-1 sm:flex-initial">
+                  <svg class="w-4 h-4 text-emerald-400 icon-mic flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                  <span class="label-mic hidden xs:inline">Micrófono activo</span>
                 </button>
                 
-                <div id="mic-dropdown-menu" class="absolute bottom-full left-0 mb-2 w-full sm:w-64 bg-[#0f111a] border border-white/10 rounded-xl shadow-2xl overflow-hidden hidden flex-col z-50 origin-bottom">
-                  <div class="px-3 py-2 border-b border-white/10 bg-black/40">
-                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Entrada de Audio</span>
-                  </div>
-                  <div id="mic-options-list" class="max-h-40 overflow-y-auto py-1 custom-scrollbar"></div>
+                <!-- Divider -->
+                <div class="w-px bg-white/10 my-1.5"></div>
+                
+                <!-- Arrow Selector -->
+                <div class="relative flex items-center" id="mic-selector-container">
+                  <button onclick="window.syncApp.toggleMicDropdown()" class="px-2 h-full flex items-center justify-center text-gray-300 hover:text-white transition">
+                    <svg id="mic-selector-arrow" class="w-3.5 h-3.5 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                  </button>
                   
-                  <div class="border-t border-white/10 bg-black/40 p-2 space-y-1">
-                    <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
-                      <span class="text-xs text-gray-300 font-medium">🎸 Modo OTG</span>
-                      <input type="checkbox" id="toggle-otg-mode" onchange="window.syncApp.toggleOtgMode(this.checked)" class="accent-accent w-3.5 h-3.5">
-                    </label>
-                    <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
-                      <span class="text-xs text-gray-300 font-medium">🎧 Retorno</span>
-                      <input type="checkbox" id="toggle-loopback" onchange="window.syncApp.toggleLocalMonitor(this.checked)" class="accent-accent w-3.5 h-3.5">
-                    </label>
+                  <!-- Dropdown Menu -->
+                  <div id="mic-dropdown-menu" class="absolute bottom-full left-0 mb-2 w-64 bg-[#0f111a] border border-white/10 rounded-xl shadow-2xl overflow-hidden hidden flex-col z-50 origin-bottom">
+                    <div class="px-3 py-2 border-b border-white/10 bg-black/40">
+                      <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Entrada de Audio</span>
+                    </div>
+                    <div id="mic-options-list" class="max-h-40 overflow-y-auto py-2 px-2 custom-scrollbar space-y-1"></div>
+                    
+                    <div class="border-t border-white/10 bg-black/40 p-2 space-y-1">
+                      <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
+                        <span class="text-xs text-gray-300 font-medium">🎸 Modo OTG</span>
+                        <input type="checkbox" id="toggle-otg-mode" onchange="window.syncApp.toggleOtgMode(this.checked)" class="accent-accent w-3.5 h-3.5">
+                      </label>
+                      <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
+                        <span class="text-xs text-gray-300 font-medium">🎧 Retorno</span>
+                        <input type="checkbox" id="toggle-loopback" onchange="window.syncApp.toggleLocalMonitor(this.checked)" class="accent-accent w-3.5 h-3.5">
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -269,7 +275,6 @@
               </button>
             </div>
           </div>
-        </div>
 
         <!-- LAYOUT 3: SCREENSHARE VIEW -->
         <div id="layout-screenshare" class="view-panel hidden flex-1 flex flex-col sm:flex-row gap-3 sm:gap-4 h-full min-h-[350px]">

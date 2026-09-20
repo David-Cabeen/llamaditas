@@ -15,9 +15,16 @@ class WebRTCManager {
     this.localStream = null;
     this.screenStream = null;
     this.isScreenSharing = false;
-    this.peers = new Map(); // peerId -> { pc, isPolite, makingOffer, candidateQueue, remoteStream, info }
-    this.signalSender = null; // function(targetPeerId, signalType, payload)
+    this.peers = new Map();
+    this.signalSender = null;
     this.myPeerId = null;
+
+    // Audio Modifiers
+    this.otgMode = false;
+    this.isMonitoring = false;
+    this.monitorAudioEl = new Audio();
+    this.monitorAudioEl.autoplay = true;
+    this.monitorAudioEl.muted = true;
 
     // Callbacks
     this.onRemoteTrackAdded = null;
@@ -25,13 +32,41 @@ class WebRTCManager {
     this.onConnectionQuality = null;
   }
 
-  async initLocalMedia(cameraDefaultOn = false) {
-    const audioConstraints = {
+  setOtgMode(enabled) {
+    this.otgMode = enabled;
+  }
+
+  getAudioConstraints(deviceId = null) {
+    const baseConstraints = this.otgMode ? {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: 2
+    } : {
       echoCancellation: true,
       noiseSuppression: true,
       autoGainControl: true
     };
 
+    if (deviceId && deviceId !== "default") {
+      baseConstraints.deviceId = { exact: deviceId };
+    }
+    return baseConstraints;
+  }
+
+  setLocalMonitor(enabled) {
+    this.isMonitoring = enabled;
+    if (enabled && this.localStream) {
+      this.monitorAudioEl.srcObject = this.localStream;
+      this.monitorAudioEl.muted = false;
+      this.monitorAudioEl.play().catch(e => console.warn("Monitor play prevented:", e));
+    } else {
+      this.monitorAudioEl.muted = true;
+      this.monitorAudioEl.srcObject = null;
+    }
+  }
+
+  async initLocalMedia(cameraDefaultOn = false) {
     const mobileVideoConstraints = {
       facingMode: "user",
       width: { ideal: 1280 },
@@ -39,26 +74,23 @@ class WebRTCManager {
     };
 
     try {
-      // 1. Try ideal mobile constraints
       this.localStream = await navigator.mediaDevices.getUserMedia({
         video: mobileVideoConstraints,
-        audio: audioConstraints
+        audio: this.getAudioConstraints()
       });
     } catch (err) {
       console.warn("[WebRTC] Primary camera constraints rejected. Fallback to default video:", err);
       try {
-        // 2. Fallback to basic video for mobile WebKit compatibility
         this.localStream = await navigator.mediaDevices.getUserMedia({
           video: true,
-          audio: audioConstraints
+          audio: this.getAudioConstraints()
         });
       } catch (err2) {
         console.warn("[WebRTC] Camera unavailable, falling back to audio only:", err2);
         try {
-          // 3. Fallback to pure audio if camera permission denied or missing
           this.localStream = await navigator.mediaDevices.getUserMedia({
             video: false,
-            audio: audioConstraints
+            audio: this.getAudioConstraints()
           });
         } catch (err3) {
           console.error("[WebRTC] Media acquisition completely rejected:", err3);
@@ -67,11 +99,13 @@ class WebRTCManager {
       }
     }
 
-    // Disable camera track if defaulted OFF
     if (!cameraDefaultOn && this.localStream) {
-      this.localStream.getVideoTracks().forEach(track => {
-        track.enabled = false;
-      });
+      this.localStream.getVideoTracks().forEach(track => { track.enabled = false; });
+    }
+
+    if (this.isMonitoring) {
+      this.monitorAudioEl.srcObject = this.localStream;
+      this.monitorAudioEl.muted = false;
     }
 
     return this.localStream;
@@ -83,9 +117,7 @@ class WebRTCManager {
   }
 
   getOrCreatePeer(peerId, peerInfo = {}) {
-    if (this.peers.has(peerId)) {
-      return this.peers.get(peerId);
-    }
+    if (this.peers.has(peerId)) return this.peers.get(peerId);
 
     console.log(`[WebRTC] Initializing RTCPeerConnection for ${peerId}`);
     const pc = new RTCPeerConnection(RTC_CONFIG);
@@ -96,14 +128,12 @@ class WebRTCManager {
       info: peerInfo
     };
 
-    // Attach local audio and video tracks
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => {
         pc.addTrack(track, this.localStream);
       });
     }
 
-    // ICE Candidate generation
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
         this.sendSignal(peerId, "candidate", {
@@ -114,7 +144,6 @@ class WebRTCManager {
       }
     };
 
-    // Remote Track handling
     pc.ontrack = (event) => {
       const stream = event.streams[0];
       let isScreen = false;
@@ -143,16 +172,9 @@ class WebRTCManager {
       }
     };
 
-    // Connection state monitoring
     pc.oniceconnectionstatechange = () => {
-      console.log(`[WebRTC] ICE state with ${peerId}: ${pc.iceConnectionState}`);
-      if (this.onConnectionQuality) {
-        this.onConnectionQuality(peerId, pc.iceConnectionState);
-      }
-      if (pc.iceConnectionState === "failed") {
-        console.warn(`[WebRTC] ICE failed with ${peerId}. Restarting ICE...`);
-        pc.restartIce();
-      }
+      if (this.onConnectionQuality) this.onConnectionQuality(peerId, pc.iceConnectionState);
+      if (pc.iceConnectionState === "failed") pc.restartIce();
     };
 
     this.peers.set(peerId, peerData);
@@ -162,7 +184,7 @@ class WebRTCManager {
   async switchMicrophone(deviceId) {
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true }
+        audio: this.getAudioConstraints(deviceId)
       });
       const newAudioTrack = newStream.getAudioTracks()[0];
 
@@ -173,25 +195,28 @@ class WebRTCManager {
       this.localStream.addTrack(newAudioTrack);
 
       this.replaceAudioTrackOnAllPeers(newAudioTrack);
+
+      // Re-attach hardware monitor
+      if (this.isMonitoring) {
+        this.monitorAudioEl.srcObject = this.localStream;
+        this.monitorAudioEl.play().catch(e => console.warn(e));
+      }
+
+      // Re-attach Web Audio API visualizer/mixer
+      if (window.audioMixer) {
+        window.audioMixer.attachLocalMic(this.localStream);
+      }
     } catch (err) {
       console.error("Failed to switch microphone:", err);
     }
   }
 
   async createAndSendOffer(targetPeerId) {
-    console.log(`[WebRTC] Creating explicit SDP offer for ${targetPeerId}`);
     const peer = this.getOrCreatePeer(targetPeerId);
     try {
-      const offer = await peer.pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true
-      });
+      const offer = await peer.pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
       await peer.pc.setLocalDescription(offer);
-
-      this.sendSignal(targetPeerId, "offer", {
-        type: offer.type,
-        sdp: offer.sdp
-      });
+      this.sendSignal(targetPeerId, "offer", { type: offer.type, sdp: offer.sdp });
     } catch (err) {
       console.error(`[WebRTC] Error creating offer for ${targetPeerId}:`, err);
     }
@@ -203,12 +228,7 @@ class WebRTCManager {
 
     try {
       if (signalType === "offer") {
-        console.log(`[WebRTC] Handling offer from ${fromPeerId}`);
-        const rtcDesc = new RTCSessionDescription({
-          type: payload.type || "offer",
-          sdp: payload.sdp || payload
-        });
-
+        const rtcDesc = new RTCSessionDescription({ type: payload.type || "offer", sdp: payload.sdp || payload });
         await pc.setRemoteDescription(rtcDesc);
 
         while (peer.candidateQueue.length > 0) {
@@ -218,19 +238,10 @@ class WebRTCManager {
 
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-
-        this.sendSignal(fromPeerId, "answer", {
-          type: answer.type,
-          sdp: answer.sdp
-        });
+        this.sendSignal(fromPeerId, "answer", { type: answer.type, sdp: answer.sdp });
 
       } else if (signalType === "answer") {
-        console.log(`[WebRTC] Handling answer from ${fromPeerId}`);
-        const rtcDesc = new RTCSessionDescription({
-          type: payload.type || "answer",
-          sdp: payload.sdp || payload
-        });
-
+        const rtcDesc = new RTCSessionDescription({ type: payload.type || "answer", sdp: payload.sdp || payload });
         await pc.setRemoteDescription(rtcDesc);
 
         while (peer.candidateQueue.length > 0) {
@@ -255,24 +266,18 @@ class WebRTCManager {
   }
 
   sendSignal(targetPeerId, signalType, payload) {
-    if (this.signalSender) {
-      this.signalSender(targetPeerId, signalType, payload);
-    }
+    if (this.signalSender) this.signalSender(targetPeerId, signalType, payload);
   }
 
   toggleAudio(enabled) {
     if (this.localStream) {
-      this.localStream.getAudioTracks().forEach(track => {
-        track.enabled = enabled;
-      });
+      this.localStream.getAudioTracks().forEach(track => { track.enabled = enabled; });
     }
   }
 
   toggleVideo(enabled) {
     if (this.localStream) {
-      this.localStream.getVideoTracks().forEach(track => {
-        track.enabled = enabled;
-      });
+      this.localStream.getVideoTracks().forEach(track => { track.enabled = enabled; });
     }
   }
 
@@ -298,21 +303,13 @@ class WebRTCManager {
       
       return false;
     } else {
-      // Mobile Feature Guard
       if (!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== "function") {
-        if (window.syncApp) {
-          window.syncApp.showToast("El uso compartido de pantalla no es compatible con este navegador móvil.");
-        }
+        if (window.syncApp) window.syncApp.showToast("El uso compartido de pantalla no es compatible en este dispositivo.");
         return false;
       }
 
       try {
-        // Mobile-friendly constraints without strict desktop parameters
-        this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: true
-        });
-
+        this.screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         const screenVideoTrack = this.screenStream.getVideoTracks()[0];
         if (!screenVideoTrack) return false;
         this._screenTrackId = screenVideoTrack.id;
@@ -336,10 +333,6 @@ class WebRTCManager {
         this.isScreenSharing = true;
         return true;
       } catch (err) {
-        console.warn("[WebRTC] Screen sharing cancelled or restricted:", err);
-        if (window.syncApp && err.name !== "NotAllowedError") {
-          window.syncApp.showToast("No se pudo iniciar la pantalla compartida.");
-        }
         return false;
       }
     }
@@ -348,18 +341,14 @@ class WebRTCManager {
   replaceVideoTrackOnAllPeers(newTrack) {
     this.peers.forEach(({ pc }) => {
       const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
-      if (sender) {
-        sender.replaceTrack(newTrack);
-      }
+      if (sender) sender.replaceTrack(newTrack);
     });
   }
 
   replaceAudioTrackOnAllPeers(newTrack) {
     this.peers.forEach(({ pc }) => {
       const sender = pc.getSenders().find(s => s.track && s.track.kind === "audio");
-      if (sender) {
-        sender.replaceTrack(newTrack);
-      }
+      if (sender) sender.replaceTrack(newTrack);
     });
   }
 
@@ -369,24 +358,16 @@ class WebRTCManager {
       pc.close();
       this.peers.delete(peerId);
 
-      if (window.audioMixer) {
-        window.audioMixer.detachPeerStream(peerId);
-      }
-      if (this.onRemotePeerDisconnected) {
-        this.onRemotePeerDisconnected(peerId);
-      }
+      if (window.audioMixer) window.audioMixer.detachPeerStream(peerId);
+      if (this.onRemotePeerDisconnected) this.onRemotePeerDisconnected(peerId);
     }
   }
 
   closeAll() {
     this.peers.forEach(({ pc }) => pc.close());
     this.peers.clear();
-    if (this.localStream) {
-      this.localStream.getTracks().forEach(t => t.stop());
-    }
-    if (this.screenStream) {
-      this.screenStream.getTracks().forEach(t => t.stop());
-    }
+    if (this.localStream) this.localStream.getTracks().forEach(t => t.stop());
+    if (this.screenStream) this.screenStream.getTracks().forEach(t => t.stop());
   }
 }
 
