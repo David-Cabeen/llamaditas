@@ -22,6 +22,18 @@ class SupabaseP2P {
       this.supabaseUrl = savedUrl;
       this.supabaseKey = localStorage.getItem("syncwave_sb_key") || DEFAULT_KEY;
     }
+
+    // Inicializar el cliente globalmente de inmediato para que Auth funcione en el Landing
+    if (window.supabase) {
+      this.client = window.supabase.createClient(this.supabaseUrl, this.supabaseKey, {
+        realtime: {
+          params: {
+            eventsPerSecond: 25
+          }
+        }
+      });
+      window.supabaseClient = this.client; // Exportar instancia para app.js
+    }
   }
 
   saveCredentials(url, key) {
@@ -37,21 +49,22 @@ class SupabaseP2P {
     this.peerId = peerId;
     this.userName = userName;
 
-    if (!window.supabase) {
-      console.warn("[Supabase] Waiting for Supabase SDK...");
-      setTimeout(() => this.connect(roomId, peerId, userName, onPeerJoin, onPeerLeave, onSignal, onMusicAction, onUserState, onMusicStateSync), 300);
-      return;
+    if (!window.supabaseClient) {
+      if (window.supabase) {
+        this.client = window.supabase.createClient(this.supabaseUrl, this.supabaseKey, {
+          realtime: { params: { eventsPerSecond: 25 } }
+        });
+        window.supabaseClient = this.client;
+      } else {
+        console.warn("[Supabase] Waiting for Supabase SDK...");
+        setTimeout(() => this.connect(roomId, peerId, userName, onPeerJoin, onPeerLeave, onSignal, onMusicAction, onUserState, onMusicStateSync), 300);
+        return;
+      }
+    } else {
+      this.client = window.supabaseClient;
     }
 
     try {
-      this.client = window.supabase.createClient(this.supabaseUrl, this.supabaseKey, {
-        realtime: {
-          params: {
-            eventsPerSecond: 25
-          }
-        }
-      });
-
       const channelName = `syncwave_room_${this.roomId}`;
       this.channel = this.client.channel(channelName, {
         config: {
@@ -62,7 +75,7 @@ class SupabaseP2P {
 
       await this.channel.track({
         name: this.userName,
-        real_username: window.syncApp.username,
+        username: window.syncApp.username, // Actualizado para DMs
         avatar_url: window.syncApp.avatarUrl,
         mic: true,
         cam: false,
@@ -162,6 +175,8 @@ class SupabaseP2P {
           
           await this.channel.track({
             name: this.userName,
+            username: window.syncApp.username, // CRITICAL: Para asegurar DMs
+            avatar_url: window.syncApp.avatarUrl,
             mic: true,
             cam: false,
             joinedAt: Date.now()

@@ -24,6 +24,8 @@ class SyncWaveApp {
   }
 
   init() {
+    this.initAuth(); // Inicializar Autenticación al cargar la página instantáneamente
+
     const params = new URLSearchParams(window.location.search);
     const roomFromUrl = params.get("room");
     const savedRoomCode = localStorage.getItem("syncwave_room_code") || "";
@@ -110,6 +112,10 @@ class SyncWaveApp {
     document.getElementById("call-screen").classList.remove("hidden");
     document.getElementById("display-room-code").innerText = this.roomId;
 
+    // Inicializar rastreo de estadísticas
+    this.callStartTime = Date.now();
+    this.updateStat('total_calls');
+
     try {
       const localStream = await window.webrtcManager.initLocalMedia(false);
       this.attachLocalVideo(localStream);
@@ -121,6 +127,15 @@ class SyncWaveApp {
     }
 
     this.connectSupabase();
+
+    setInterval(() => {
+      if (this.callStartTime > 0) {
+        const elapsedSecs = Math.floor((Date.now() - this.callStartTime) / 1000);
+        if (elapsedSecs > 0 && elapsedSecs % 60 === 0) {
+          this.updateStat('total_time_sec', 60);
+        }
+      }
+    }, 60000);
   }
 
   toggleMicDropdown(forceState) {
@@ -237,7 +252,7 @@ class SyncWaveApp {
     if (this.remotePeers.has(peerId)) return;
     const peerName = info.name || "Amigo";
     console.log(`[App] Adding remote peer ${peerName} (${peerId})`);
-    this.remotePeers.set(peerId, { name: peerName, mic: info.mic !== false, cam: info.cam === true });
+    this.remotePeers.set(peerId, { name: peerName, username: info.username, mic: info.mic !== false, cam: info.cam === true });
     window.webrtcManager.getOrCreatePeer(peerId, info);
     this.showToast(`${peerName} se unió a la llamada`);
     this.renderVideoTiles();
@@ -378,7 +393,6 @@ class SyncWaveApp {
   renderVideoTiles() {
     const remotePeersList = Array.from(this.remotePeers.entries());
     const remoteContainer = document.getElementById("remote-video-container");
-    const cinemaBubbleContainer = document.getElementById("cinema-pip-container");
     const screenshareSidebar = document.getElementById("screenshare-sidebar");
     const screenshareMain = document.getElementById("screenshare-main");
 
@@ -479,26 +493,6 @@ class SyncWaveApp {
           }
         });
       }
-    }
-
-    if (cinemaBubbleContainer) {
-      cinemaBubbleContainer.innerHTML = "";
-      remotePeersList.forEach(([peerId, p]) => {
-        const bubble = document.createElement("div");
-        bubble.className = "relative w-48 h-32 rounded-xl overflow-hidden glass border border-accent/60 shadow-2xl";
-        bubble.innerHTML = `
-          <video autoplay playsinline class="w-full h-full object-cover"></video>
-          <div class="absolute bottom-1 left-2 text-[10px] font-bold text-white bg-black/60 px-1.5 py-0.5 rounded">
-            ${p.name || "Amigo"}
-          </div>
-        `;
-        cinemaBubbleContainer.appendChild(bubble);
-        if (p.stream) {
-          const v = bubble.querySelector("video");
-          v.srcObject = p.stream;
-          v.play().catch(e => console.warn(e));
-        }
-      });
     }
 
     remotePeersList.forEach(([peerId, p]) => {
@@ -849,27 +843,31 @@ class SyncWaveApp {
   }
 
   async initAuth() {
-    if (!window.supabase) return;
-    const { data } = await window.supabase.auth.getSession();
-    if (data.session) {
+    if (!window.supabaseClient) return;
+    const { data } = await window.supabaseClient.auth.getSession();
+    if (data && data.session) {
       this.session = data.session;
       this.username = data.session.user.user_metadata.preferred_username || data.session.user.email.split("@")[0];
       this.avatarUrl = data.session.user.user_metadata.avatar_url;
       this.userName = this.username;
       
       const btn = document.getElementById("btn-login");
-      if (btn) btn.innerHTML = `<img src="${this.avatarUrl}" class="w-5 h-5 rounded-full"> <span>Logueado como ${this.username}</span>`;
+      if (btn) btn.innerHTML = `<img src="${this.avatarUrl}" class="w-5 h-5 rounded-full object-cover"> <span>Logueado como ${this.username}</span>`;
+      
+      const nameInput = document.getElementById("input-user-name");
+      if (nameInput) nameInput.value = this.userName;
     }
   }
 
   async loginWithProvider() {
     if (this.session) return;
-    await window.supabase.auth.signInWithOAuth({ provider: 'google' });
+    if (!window.supabaseClient) return;
+    await window.supabaseClient.auth.signInWithOAuth({ provider: 'google' });
   }
 
   updateStat(statName, increment = 1) {
-    if (!this.session || !window.supabase) return;
-    window.supabase.rpc('increment_my_stat', { stat_column: statName, inc_val: increment })
+    if (!this.session || !window.supabaseClient) return;
+    window.supabaseClient.rpc('increment_my_stat', { stat_column: statName, inc_val: increment })
       .catch(() => console.warn("Stats API req failed"));
   }
 
@@ -910,7 +908,7 @@ class SyncWaveApp {
       if (targetPeerId) {
         window.supabaseP2P.channel.send({
           type: "broadcast", event: "chat",
-          payload: { from: this.peerId, target: targetPeerId, name: this.userName, avatar: this.avatarUrl, msg: actualMsg, isPrivate: true }
+          payload: { from: this.userId, target: targetPeerId, name: this.userName, avatar: this.avatarUrl, msg: actualMsg, isPrivate: true }
         });
         this.renderChatMessage(this.userName, actualMsg, this.avatarUrl, true, true);
         this.updateStat('messages_sent');
@@ -920,7 +918,7 @@ class SyncWaveApp {
     } else {
       window.supabaseP2P.channel.send({
         type: "broadcast", event: "chat",
-        payload: { from: this.peerId, name: this.userName, avatar: this.avatarUrl, msg: text, isPrivate: false }
+        payload: { from: this.userId, name: this.userName, avatar: this.avatarUrl, msg: text, isPrivate: false }
       });
       this.renderChatMessage(this.userName, text, this.avatarUrl, true, false);
       this.updateStat('messages_sent');
