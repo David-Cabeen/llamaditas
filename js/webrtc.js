@@ -36,6 +36,22 @@ class WebRTCManager {
     this.otgMode = enabled;
   }
 
+  // Intercept WebRTC connection data to disable Opus voice compression
+  _optimizeSdpForMusic(sdp) {
+    if (!this.otgMode) return sdp; // Leave standard voice settings if OTG is off
+
+    // Find the Opus payload type in the SDP
+    const match = sdp.match(/a=rtpmap:(\d+) opus\/48000\/2/i);
+    if (!match) return sdp;
+    const opusPayload = match[1];
+
+    // Force high-bitrate stereo and explicitly disable DTX (speech detection gating)
+    const fmtpRegex = new RegExp(`a=fmtp:${opusPayload} (.*)`, 'i');
+    return sdp.replace(fmtpRegex, (fullMatch, currentParams) => {
+      return `a=fmtp:${opusPayload} ${currentParams}; stereo=1; sprop-stereo=1; maxaveragebitrate=510000; cbr=1; usedtx=0`;
+    });
+  }
+
   getAudioConstraints(deviceId = null) {
     let baseConstraints = {};
     
@@ -217,6 +233,12 @@ class WebRTCManager {
       if (window.audioMixer) {
         window.audioMixer.attachLocalMic(this.localStream);
       }
+
+      // Force renegotiation with connected peers so the new music-grade SDP parameters take effect
+      this.peers.forEach((peer, peerId) => {
+        this.createAndSendOffer(peerId);
+      });
+
     } catch (err) {
       console.error("Failed to switch microphone:", err);
     }
@@ -226,6 +248,10 @@ class WebRTCManager {
     const peer = this.getOrCreatePeer(targetPeerId);
     try {
       const offer = await peer.pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+      
+      // Inject Music Mode SDP parameters before setting local description
+      offer.sdp = this._optimizeSdpForMusic(offer.sdp); 
+      
       await peer.pc.setLocalDescription(offer);
       this.sendSignal(targetPeerId, "offer", { type: offer.type, sdp: offer.sdp });
     } catch (err) {
@@ -248,6 +274,10 @@ class WebRTCManager {
         }
 
         const answer = await pc.createAnswer();
+        
+        // Inject Music Mode SDP parameters before answering
+        answer.sdp = this._optimizeSdpForMusic(answer.sdp);
+        
         await pc.setLocalDescription(answer);
         this.sendSignal(fromPeerId, "answer", { type: answer.type, sdp: answer.sdp });
 
