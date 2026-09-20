@@ -930,18 +930,28 @@ class SyncWaveApp {
   async loadUserStats() {
     if (!this.session || !window.supabaseClient) return;
     try {
-      const { data, error } = await window.supabaseClient.rpc('get_my_stats');
+      // Fetch directly from the user_stats table instead of relying on the RPC
+      const { data, error } = await window.supabaseClient
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', this.session.user.id)
+        .single(); // single() returns the exact object rather than an array
+
       if (data && !error) {
-        // CRITICAL FIX: Extract the first row if the RPC returns an array
-        const stats = Array.isArray(data) ? data[0] : data;
+        this.stats.totalCalls = data.total_calls || 0;
+        this.stats.totalTimeSec = Math.floor((data.total_time_sec || 0) / 60);
         
-        if (stats) {
-          this.stats.totalCalls = stats.total_calls || 0;
-          this.stats.totalTimeSec = Math.floor((stats.total_time_sec || 0) / 60);
-          this.stats.topFriendName = stats.top_friend_name;
-          this.stats.topFriendAvatar = stats.top_friend_avatar;
-          this.stats.topFriendLink = `/user/${stats.top_friend_username || '#'}`;
-        }
+        // The user_stats table doesn't track top friends natively, so we fallback gracefully
+        this.stats.topFriendName = "";
+        
+        // Force update the UI immediately so it populates when the data arrives
+        const callsEl = document.getElementById("profile-stat-calls");
+        const timeEl = document.getElementById("profile-stat-time");
+        if (callsEl) callsEl.innerText = this.stats.totalCalls;
+        if (timeEl) timeEl.innerText = this.stats.totalTimeSec;
+      } else if (error && error.code !== 'PGRST116') {
+        // Log errors unless it's just a "no rows found" error for brand new users
+        console.warn("Error fetching stats:", error.message);
       }
     } catch(e) { 
       console.warn("Error cargando stats", e); 
