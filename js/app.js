@@ -909,10 +909,8 @@ class SyncWaveApp {
         data: { avatar_url: input }
       });
       
-      // 2. Update the public database record (CRITICAL FIX)
-      // Note: If your table is named 'profiles' instead of 'users', change it below
       const { error: dbError } = await window.supabaseClient
-        .from('users') 
+        .from('profiles') 
         .update({ avatar_url: input })
         .eq('id', this.session.user.id);
 
