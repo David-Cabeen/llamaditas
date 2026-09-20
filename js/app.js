@@ -1,4 +1,4 @@
-﻿// SyncWave Application Coordinator (Supabase Serverless P2P & Clean Drawer UI)
+﻿// SyncWave Application Coordinator (Supabase Serverless P2P, Mobile PWA & Clean UI)
 class SyncWaveApp {
   constructor() {
     this.roomId = null;
@@ -19,6 +19,7 @@ class SyncWaveApp {
     this.username = null;
     this.avatarUrl = null;
     this.callStartTime = 0;
+    this.deferredPwaPrompt = null;
     this.stats = { totalCalls: 0, totalTimeSec: 0, topFriendName: '', topFriendAvatar: '', topFriendLink: '#' };
 
     this.init();
@@ -26,6 +27,7 @@ class SyncWaveApp {
 
   init() {
     this.initAuth();
+    this.initPwa();
 
     const params = new URLSearchParams(window.location.search);
     const roomFromUrl = params.get("room");
@@ -74,6 +76,37 @@ class SyncWaveApp {
     });
   }
 
+  // =================== PWA INSTALLATION =====================
+
+  initPwa() {
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      this.deferredPwaPrompt = e;
+      const btns = document.querySelectorAll(".btn-install-pwa");
+      btns.forEach(btn => btn.classList.remove("hidden"));
+    });
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(err => {
+        console.warn("[PWA] Service worker registration failed:", err);
+      });
+    }
+  }
+
+  async installPwa() {
+    if (!this.deferredPwaPrompt) return;
+    this.deferredPwaPrompt.prompt();
+    const { outcome } = await this.deferredPwaPrompt.userChoice;
+    if (outcome === "accepted") {
+      this.showToast("¡Aplicación instalada en tu dispositivo!");
+    }
+    this.deferredPwaPrompt = null;
+    const btns = document.querySelectorAll(".btn-install-pwa");
+    btns.forEach(btn => btn.classList.add("hidden"));
+  }
+
+  // ==========================================================
+
   generateRoomCode() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let code = "SYNC-";
@@ -104,7 +137,6 @@ class SyncWaveApp {
     const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?room=${this.roomId}`;
     window.history.pushState({ path: newUrl }, "", newUrl);
 
-    // Revelar controles de navegación en el header
     document.getElementById("layout-switchers").classList.remove("hidden");
     document.getElementById("layout-switchers").classList.add("flex");
     document.getElementById("btn-nav-chat").classList.remove("hidden");
@@ -164,18 +196,18 @@ class SyncWaveApp {
   renderCamOffPlaceholder(container, avatar, idPrefix) {
     if (avatar && this.session) {
       container.innerHTML = `
-        <img src="${avatar}" id="${idPrefix}-img" class="w-24 h-24 rounded-full object-cover shadow-2xl border-2 border-white/20 mb-3" crossorigin="anonymous">
-        <p class="text-sm font-semibold text-white">Cámara desactivada</p>
+        <img src="${avatar}" id="${idPrefix}-img" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-2xl border-2 border-white/20 mb-3" crossorigin="anonymous">
+        <p class="text-xs sm:text-sm font-semibold text-white">Cámara desactivada</p>
       `;
       this.extractProminentColor(avatar, container.id);
     } else {
       container.style.backgroundColor = "#000000";
       container.innerHTML = `
-        <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 mb-3 glow-subtle">
-          <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 mb-3 glow-subtle">
+          <svg class="w-8 h-8 sm:w-10 sm:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
         </div>
-        <p class="text-sm font-semibold text-white">Cámara desactivada</p>
-        <p class="text-xs text-gray-500 mt-1">Usuario Invitado</p>
+        <p class="text-xs sm:text-sm font-semibold text-white">Cámara desactivada</p>
+        <p class="text-[10px] sm:text-xs text-gray-500 mt-1">Usuario Invitado</p>
       `;
     }
   }
@@ -214,18 +246,22 @@ class SyncWaveApp {
     if (this.isMicDropdownOpen) {
       menu.classList.remove("hidden");
       menu.classList.add("flex", "animate-dropdown");
-      arrow.classList.remove("rotate-180");
-      arrow.classList.add("rotate-0");
+      if (arrow) {
+        arrow.classList.remove("rotate-180");
+        arrow.classList.add("rotate-0");
+      }
     } else {
       menu.classList.add("hidden");
       menu.classList.remove("flex", "animate-dropdown");
-      arrow.classList.remove("rotate-0"); 
-      arrow.classList.add("rotate-180");
+      if (arrow) {
+        arrow.classList.remove("rotate-0"); 
+        arrow.classList.add("rotate-180");
+      }
     }
   }
 
   toggleOtgMode(checked) {
-    window.webrtcManager.setOtgMode(checked);
+    if (window.webrtcManager.setOtgMode) window.webrtcManager.setOtgMode(checked);
     window.webrtcManager.switchMicrophone(this.activeMicId);
     this.showToast(checked ? "🎸 Modo OTG activado: Audio crudo sin compresión" : "🎙️ Procesamiento de voz estándar activado");
   }
@@ -262,7 +298,7 @@ class SyncWaveApp {
       return `
         <button onclick="window.syncApp.selectMicInput('${mic.deviceId}', '${mic.label.replace(/'/g, "\\'") || 'Micrófono desconocido'}')" 
                 class="${baseClass} ${colorClass}">
-          <span class="truncate pr-2">${mic.label || 'Micrófono desconocido'}</span>
+          <span class="truncate pr-2">${mic.label || 'Micrófono predeterminado'}</span>
           ${indicator}
         </button>
       `;
@@ -271,7 +307,8 @@ class SyncWaveApp {
 
   selectMicInput(deviceId, label) {
     this.activeMicId = deviceId;
-    document.getElementById("mic-selector-label").innerText = label;
+    const labelEl = document.getElementById("mic-selector-label");
+    if (labelEl) labelEl.innerText = label;
     this.renderMicOptions(); 
     this.toggleMicDropdown(false); 
     window.webrtcManager.switchMicrophone(deviceId); 
@@ -390,7 +427,7 @@ class SyncWaveApp {
       v.muted = true;
       v.play().catch(e => console.warn(e));
     });
-    document.querySelectorAll(".local-user-name").forEach(el => el.innerText = `${this.userName} (You)`);
+    document.querySelectorAll(".local-user-name").forEach(el => el.innerText = `${this.userName} (Tú)`);
     this.updateCamPlaceholder();
   }
 
@@ -448,9 +485,9 @@ class SyncWaveApp {
       if (activeNameEl) activeNameEl.innerText = "Pantalla Compartida";
       
       const localTile = document.createElement("div");
-      localTile.className = "relative h-32 rounded-xl overflow-hidden glass border border-white/10 video-tile";
+      localTile.className = "relative h-28 sm:h-32 rounded-xl overflow-hidden glass border border-white/10 video-tile";
       localTile.innerHTML = `
-        <video class="local-video-feed absolute inset-0 w-full h-full object-cover -z-10" autoplay playsinline muted></video>
+        <video class="local-video-feed absolute inset-0 w-full h-full object-cover -z-10" autoplay playsinline webkit-playsinline muted></video>
         <div class="absolute bottom-1 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-medium text-white flex items-center gap-1.5">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Tú
         </div>
@@ -462,7 +499,7 @@ class SyncWaveApp {
       if (this.localScreenStream) {
          screenshareMain.innerHTML = `
            <div class="video-contain">
-             <video autoplay playsinline muted></video>
+             <video autoplay playsinline webkit-playsinline muted></video>
            </div>
          `;
          screenshareMain.querySelector("video").srcObject = this.localScreenStream;
@@ -473,11 +510,11 @@ class SyncWaveApp {
     if (remoteContainer) {
       if (remotePeersList.length === 0) {
         remoteContainer.innerHTML = `
-          <div class="w-full h-full flex flex-col items-center justify-center p-8 text-center glass rounded-2xl border border-white/10 bg-gradient-to-b from-gray-900/30 to-black/80 min-h-[400px]">
-            <div class="w-16 h-16 rounded-2xl bg-accent/20 border border-accent/40 flex items-center justify-center text-accent mb-4 glow-accent">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+          <div class="w-full h-full flex flex-col items-center justify-center p-6 sm:p-8 text-center glass rounded-2xl border border-white/10 bg-gradient-to-b from-gray-900/30 to-black/80 min-h-[300px] sm:min-h-[400px]">
+            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-accent/20 border border-accent/40 flex items-center justify-center text-accent mb-4 glow-accent">
+              <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
             </div>
-            <h4 class="text-white font-bold text-base mb-1">Esperando a que un amigo se conecte</h4>
+            <h4 class="text-white font-bold text-sm sm:text-base mb-1">Esperando a que un amigo se conecte</h4>
             <p class="text-xs text-gray-400 max-w-sm mb-4">Envía tu enlace de invitación a un amigo. Cuando lo abra, se verán aquí al instante.</p>
             <button onclick="window.syncApp.copyInviteLink()" class="px-4 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition flex items-center gap-2 glow-accent">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
@@ -489,26 +526,26 @@ class SyncWaveApp {
         remoteContainer.innerHTML = "";
         remotePeersList.forEach(([peerId, p]) => {
           const tile = document.createElement("div");
-          tile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-4 video-tile group min-h-[400px]";
+          tile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 sm:p-4 video-tile group min-h-[260px] sm:min-h-[400px]";
           tile.id = `peer-tile-${peerId}`;
           const vol = window.audioMixer.getPeerVolume(peerId);
 
           tile.innerHTML = `
-            <video id="video-stream-${peerId}" autoplay playsinline class="absolute inset-0 w-full h-full object-cover -z-10 transition-opacity duration-300 ${p.cam ? 'opacity-100' : 'opacity-0'}"></video>
+            <video id="video-stream-${peerId}" autoplay playsinline webkit-playsinline class="absolute inset-0 w-full h-full object-cover -z-10 transition-opacity duration-300 ${p.cam ? 'opacity-100' : 'opacity-0'}"></video>
             
-            <div id="cam-off-${peerId}" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black transition-opacity duration-500 ${p.cam ? 'opacity-0 hidden' : 'opacity-100'}"></div>
+            <div id="cam-off-${peerId}" class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-black transition-opacity duration-500 ${p.cam ? 'opacity-0 hidden' : 'opacity-100'}"></div>
             
-            <div class="flex items-center justify-between z-10">
-              <div class="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs">
+            <div class="flex items-center justify-between z-10 gap-2">
+              <div class="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[11px] sm:text-xs">
                 <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span class="font-medium text-white">${p.name || "Amigo"}</span>
-                <span class="text-[10px] text-emerald-400 font-mono bg-emerald-400/10 px-1.5 py-0.5 rounded">P2P HD</span>
+                <span class="font-medium text-white truncate max-w-[100px] sm:max-w-none">${p.name || "Amigo"}</span>
+                <span class="text-[9px] sm:text-[10px] text-emerald-400 font-mono bg-emerald-400/10 px-1.5 py-0.5 rounded">P2P HD</span>
               </div>
               
-              <div class="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+              <div class="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2 py-1 sm:px-3 sm:py-1.5 rounded-full border border-white/10">
                 <svg class="w-3.5 h-3.5 custom-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
-                <input type="range" min="0" max="150" value="${vol}" oninput="window.syncApp.onPeerVolumeSlider('${peerId}', this.value)" class="w-20 cursor-pointer">
-                <span id="overlay-vol-${peerId}" class="text-[11px] font-mono text-gray-300 w-7 text-right">${vol}%</span>
+                <input type="range" min="0" max="150" value="${vol}" oninput="window.syncApp.onPeerVolumeSlider('${peerId}', this.value)" class="w-14 sm:w-20 cursor-pointer">
+                <span id="overlay-vol-${peerId}" class="text-[10px] sm:text-[11px] font-mono text-gray-300 w-6 text-right">${vol}%</span>
               </div>
             </div>
 
@@ -519,7 +556,7 @@ class SyncWaveApp {
                   <span class="w-0.5 h-2 bg-accent rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
                   <span class="w-0.5 h-3.5 bg-accent rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
                 </div>
-                <span class="text-[11px] font-medium">Hablando</span>
+                <span class="text-[10px] sm:text-[11px] font-medium">Hablando</span>
               </div>
               <div></div>
             </div>
@@ -540,9 +577,9 @@ class SyncWaveApp {
     remotePeersList.forEach(([peerId, p]) => {
       if (screenshareSidebar) {
         const sideTile = document.createElement("div");
-        sideTile.className = "relative h-32 rounded-xl overflow-hidden glass border border-white/10 video-tile";
+        sideTile.className = "relative h-28 sm:h-32 rounded-xl overflow-hidden glass border border-white/10 video-tile";
         sideTile.innerHTML = `
-          <video autoplay playsinline class="absolute inset-0 w-full h-full object-cover -z-10"></video>
+          <video autoplay playsinline webkit-playsinline class="absolute inset-0 w-full h-full object-cover -z-10"></video>
           <div class="absolute bottom-1 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-medium text-white flex items-center gap-1.5">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ${p.name || "Amigo"}
           </div>
@@ -554,7 +591,7 @@ class SyncWaveApp {
       if ((p.isSharingScreen || p.screenStream) && screenshareMain) {
         screenshareMain.innerHTML = `
          <div class="video-contain">
-           <video autoplay playsinline></video>
+           <video autoplay playsinline webkit-playsinline></video>
          </div>
        `;
        const activeNameEl = document.getElementById("screenshare-active-name");
@@ -637,17 +674,17 @@ class SyncWaveApp {
     this.isMicOn = !this.isMicOn;
     window.webrtcManager.toggleAudio(this.isMicOn);
     const btn = document.getElementById("btn-toggle-mic");
-    const label = btn.querySelector("span");
+    const label = btn.querySelector(".label-mic");
     const icon = btn.querySelector(".icon-mic");
 
     if (this.isMicOn) {
-      btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition";
-      label.innerText = "Micrófono activo";
-      icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>`;
+      btn.className = "flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition flex-1 sm:flex-initial";
+      if (label) label.innerText = "Micrófono activo";
+      if (icon) icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>`;
     } else {
-      btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition";
-      label.innerText = "Micrófono apagado";
-      icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>`;
+      btn.className = "flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition flex-1 sm:flex-initial";
+      if (label) label.innerText = "Micrófono apagado";
+      if (icon) icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>`;
     }
     if (this.isUsingSupabase) window.supabaseP2P.sendUserState(this.isMicOn, this.isCamOn, false);
   }
@@ -666,13 +703,13 @@ class SyncWaveApp {
   updateCamButtonUI(isOn) {
     const btn = document.getElementById("btn-toggle-cam");
     if (!btn) return;
-    const label = btn.querySelector("span");
+    const label = btn.querySelector(".label-cam");
     if (isOn) {
-      btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition";
-      label.innerText = "Cámara encendida";
+      btn.className = "flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition flex-1 sm:flex-initial";
+      if (label) label.innerText = "Cámara encendida";
     } else {
-      btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition";
-      label.innerText = "Cámara apagada";
+      btn.className = "flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition flex-1 sm:flex-initial";
+      if (label) label.innerText = "Cámara apagada";
     }
   }
 
@@ -699,7 +736,7 @@ class SyncWaveApp {
     const btn = document.getElementById("btn-screenshare");
     
     if (active) {
-      btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-accent text-white text-xs font-medium transition glow-accent";
+      if (btn) btn.className = "flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-accent text-white text-xs font-medium transition glow-accent flex-1 sm:flex-initial";
       this.showToast("Compartiendo pantalla completa");
       if (this.isUsingSupabase) window.supabaseP2P.sendScreenShareState(true);
       this.localScreenStream = window.webrtcManager.screenStream; 
@@ -712,7 +749,7 @@ class SyncWaveApp {
 
   onScreenShareEnded() {
     const btn = document.getElementById("btn-screenshare");
-    if (btn) btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition";
+    if (btn) btn.className = "flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition flex-1 sm:flex-initial";
     if (this.isUsingSupabase) window.supabaseP2P.sendScreenShareState(false);
     this.localScreenStream = null;
     if (this.currentLayout === 'screenshare') this.setLayout('studio');
@@ -766,10 +803,10 @@ class SyncWaveApp {
       const btn = document.getElementById(`btn-layout-${l}`);
       if (l === layout) {
         if (el) el.classList.remove("hidden");
-        if (btn) btn.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-accent text-white shadow-sm flex items-center gap-1.5";
+        if (btn) btn.className = "px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-accent text-white shadow-sm flex items-center gap-1.5";
       } else {
         if (el) el.classList.add("hidden");
-        if (btn) btn.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
+        if (btn) btn.className = "px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
       }
     });
     this.positionTheaterPortal();
@@ -900,11 +937,10 @@ class SyncWaveApp {
     document.getElementById("modal-profile").classList.add("hidden");
     document.getElementById("input-avatar-url").classList.add("hidden");
   }
+
   async updateProfilePicture() {
     const input = document.getElementById("avatar-url-field").value.trim();
     if (input && window.supabaseClient && this.session) {
-      
-      // 1. Update the Supabase Auth Metadata
       const { error: authError } = await window.supabaseClient.auth.updateUser({
         data: { avatar_url: input }
       });
@@ -930,27 +966,22 @@ class SyncWaveApp {
   async loadUserStats() {
     if (!this.session || !window.supabaseClient) return;
     try {
-      // Fetch directly from the user_stats table instead of relying on the RPC
       const { data, error } = await window.supabaseClient
         .from('user_stats')
         .select('*')
         .eq('user_id', this.session.user.id)
-        .single(); // single() returns the exact object rather than an array
+        .single();
 
       if (data && !error) {
         this.stats.totalCalls = data.total_calls || 0;
         this.stats.totalTimeSec = Math.floor((data.total_time_sec || 0) / 60);
-        
-        // The user_stats table doesn't track top friends natively, so we fallback gracefully
         this.stats.topFriendName = "";
         
-        // Force update the UI immediately so it populates when the data arrives
         const callsEl = document.getElementById("profile-stat-calls");
         const timeEl = document.getElementById("profile-stat-time");
         if (callsEl) callsEl.innerText = this.stats.totalCalls;
         if (timeEl) timeEl.innerText = this.stats.totalTimeSec;
       } else if (error && error.code !== 'PGRST116') {
-        // Log errors unless it's just a "no rows found" error for brand new users
         console.warn("Error fetching stats:", error.message);
       }
     } catch(e) { 
@@ -972,11 +1003,11 @@ class SyncWaveApp {
     this.isChatOpen = !this.isChatOpen;
     const sidebar = document.getElementById("chat-sidebar");
     if (this.isChatOpen) {
-      sidebar.classList.remove("w-0", "opacity-0");
-      sidebar.classList.add("w-80", "opacity-100");
+      sidebar.classList.remove("w-0", "opacity-0", "hidden");
+      sidebar.classList.add("w-full", "sm:w-80", "opacity-100");
     } else {
       sidebar.classList.add("w-0", "opacity-0");
-      sidebar.classList.remove("w-80", "opacity-100");
+      sidebar.classList.remove("w-full", "sm:w-80", "opacity-100");
     }
   }
 

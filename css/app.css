@@ -8,12 +8,15 @@
   --card-border: rgba(255, 255, 255, 0.08);
 }
 
-body {
+html, body {
+  min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-base);
   color: #f3f4f6;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   transition: background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Custom Accents */
@@ -58,8 +61,8 @@ body {
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -137,11 +140,7 @@ input[type=range]::-webkit-slider-thumb:hover {
   transform: scale(0.98);
 }
 
-/* Theater "Pantalla completa" fullscreens the whole document rather than
-   just the video panel (see toggleCinemaFullscreen() in app.js) so the
-   persistent YouTube portal stays a visible descendant of the fullscreen
-   element instead of being hidden by the browser. These rules simply hide
-   the surrounding chrome for an immersive, edge-to-edge look while active. */
+/* Theater Fullscreen */
 body.theater-fullscreen > header,
 body.theater-fullscreen #call-screen > div:first-child {
   display: none;
@@ -172,4 +171,43 @@ body.theater-fullscreen #cinema-fullscreen-container {
 
 .local-video-feed {
   transform: scaleX(-1);
+}
+
+/* ================= Mobile Adaptations ================= */
+@media (max-width: 640px) {
+  header {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  
+  #chat-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 45;
+  }
+
+  #youtube-slide-drawer {
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  .video-tile {
+    min-height: 250px !important;
+  }
+
+  #mic-selector-container {
+    width: 100%;
+  }
+
+  #mic-selector-container button {
+    width: 100%;
+  }
+
+  #mic-dropdown-menu {
+    width: 100%;
+    left: 0;
+    right: 0;
+  }
 }

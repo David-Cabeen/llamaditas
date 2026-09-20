@@ -1,4 +1,4 @@
-﻿// SyncWave WebRTC Peer-to-Peer Mesh Manager (High Stability, Low-Latency & Explicit Handshake)
+﻿// SyncWave WebRTC Peer-to-Peer Mesh Manager (High Stability, Low-Latency & Mobile Optimized)
 const RTC_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -26,42 +26,55 @@ class WebRTCManager {
   }
 
   async initLocalMedia(cameraDefaultOn = false) {
+    const audioConstraints = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    };
+
+    const mobileVideoConstraints = {
+      facingMode: "user",
+      width: { ideal: 1280 },
+      height: { ideal: 720 }
+    };
+
     try {
+      // 1. Try ideal mobile constraints
       this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 60 }
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000
-        }
+        video: mobileVideoConstraints,
+        audio: audioConstraints
       });
-
-      // Turn camera OFF by default if requested
-      if (!cameraDefaultOn) {
-        this.localStream.getVideoTracks().forEach(track => {
-          track.enabled = false;
-        });
-      }
-
-      return this.localStream;
     } catch (err) {
-      console.error("[WebRTC] Error acquiring camera/microphone:", err);
+      console.warn("[WebRTC] Primary camera constraints rejected. Fallback to default video:", err);
       try {
+        // 2. Fallback to basic video for mobile WebKit compatibility
         this.localStream = await navigator.mediaDevices.getUserMedia({
-          video: false,
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+          video: true,
+          audio: audioConstraints
         });
-        return this.localStream;
       } catch (err2) {
-        console.error("[WebRTC] Media completely rejected:", err2);
-        throw err2;
+        console.warn("[WebRTC] Camera unavailable, falling back to audio only:", err2);
+        try {
+          // 3. Fallback to pure audio if camera permission denied or missing
+          this.localStream = await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: audioConstraints
+          });
+        } catch (err3) {
+          console.error("[WebRTC] Media acquisition completely rejected:", err3);
+          throw err3;
+        }
       }
     }
+
+    // Disable camera track if defaulted OFF
+    if (!cameraDefaultOn && this.localStream) {
+      this.localStream.getVideoTracks().forEach(track => {
+        track.enabled = false;
+      });
+    }
+
+    return this.localStream;
   }
 
   setSignalingSender(senderFn, myPeerId) {
@@ -106,7 +119,6 @@ class WebRTCManager {
       const stream = event.streams[0];
       let isScreen = false;
 
-      // Distinguish the incoming screen stream from the primary camera stream
       if (stream) {
         if (!peerData.mainStreamId) peerData.mainStreamId = stream.id;
         if (stream.id !== peerData.mainStreamId && event.track.kind === "video") {
@@ -149,29 +161,23 @@ class WebRTCManager {
 
   async switchMicrophone(deviceId) {
     try {
-      // 1. Request a new audio stream using the specific device ID
       const newStream = await navigator.mediaDevices.getUserMedia({
         audio: { deviceId: { exact: deviceId }, echoCancellation: true, noiseSuppression: true }
       });
       const newAudioTrack = newStream.getAudioTracks()[0];
 
-      // 2. Stop the old microphone track
       const oldTrack = this.localStream.getAudioTracks()[0];
       if (oldTrack) oldTrack.stop();
 
-      // 3. Update the local stream
       this.localStream.removeTrack(oldTrack);
       this.localStream.addTrack(newAudioTrack);
 
-      // 4. Send the new audio track to all connected friends
       this.replaceAudioTrackOnAllPeers(newAudioTrack);
-      
     } catch (err) {
       console.error("Failed to switch microphone:", err);
     }
   }
 
-  // Explicit Offer Creation (Deterministic Handshake)
   async createAndSendOffer(targetPeerId) {
     console.log(`[WebRTC] Creating explicit SDP offer for ${targetPeerId}`);
     const peer = this.getOrCreatePeer(targetPeerId);
@@ -191,7 +197,6 @@ class WebRTCManager {
     }
   }
 
-  // Handle incoming signaling messages
   async handleSignal(fromPeerId, signalType, payload) {
     const peer = this.getOrCreatePeer(fromPeerId);
     const { pc } = peer;
@@ -206,7 +211,6 @@ class WebRTCManager {
 
         await pc.setRemoteDescription(rtcDesc);
 
-        // Process queued ICE candidates
         while (peer.candidateQueue.length > 0) {
           const cand = peer.candidateQueue.shift();
           await pc.addIceCandidate(cand).catch(e => console.warn(e));
@@ -229,7 +233,6 @@ class WebRTCManager {
 
         await pc.setRemoteDescription(rtcDesc);
 
-        // Process queued ICE candidates
         while (peer.candidateQueue.length > 0) {
           const cand = peer.candidateQueue.shift();
           await pc.addIceCandidate(cand).catch(e => console.warn(e));
@@ -281,7 +284,6 @@ class WebRTCManager {
       }
       this.isScreenSharing = false;
 
-      // Remove the screen track from peers and explicitly renegotiate
       this.peers.forEach((peer, peerId) => {
         const senders = peer.pc.getSenders();
         const screenSender = senders.find(s => s.track && s.track.id === this._screenTrackId);
@@ -291,27 +293,35 @@ class WebRTCManager {
         }
       });
 
-      // Restore mic if it was previously mixed
       const micTrack = this.localStream ? this.localStream.getAudioTracks()[0] : null;
       if (micTrack) this.replaceAudioTrackOnAllPeers(micTrack);
       
       return false;
     } else {
+      // Mobile Feature Guard
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== "function") {
+        if (window.syncApp) {
+          window.syncApp.showToast("El uso compartido de pantalla no es compatible con este navegador móvil.");
+        }
+        return false;
+      }
+
       try {
+        // Mobile-friendly constraints without strict desktop parameters
         this.screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: { cursor: "always", displaySurface: "monitor" },
-          audio: { systemAudio: "include" }
+          video: true,
+          audio: true
         });
 
         const screenVideoTrack = this.screenStream.getVideoTracks()[0];
+        if (!screenVideoTrack) return false;
         this._screenTrackId = screenVideoTrack.id;
 
         screenVideoTrack.onended = () => {
           if (window.syncApp) window.syncApp.onScreenShareEnded();
-          this.toggleScreenShare(); // Internal cleanup
+          this.toggleScreenShare();
         };
 
-        // Add the secondary stream track and renegotiate
         this.peers.forEach((peer, peerId) => {
           peer.pc.addTrack(screenVideoTrack, this.screenStream);
           this.createAndSendOffer(peerId);
@@ -326,7 +336,10 @@ class WebRTCManager {
         this.isScreenSharing = true;
         return true;
       } catch (err) {
-        console.warn("[WebRTC] Screen sharing cancelled:", err);
+        console.warn("[WebRTC] Screen sharing cancelled or restricted:", err);
+        if (window.syncApp && err.name !== "NotAllowedError") {
+          window.syncApp.showToast("No se pudo iniciar la pantalla compartida.");
+        }
         return false;
       }
     }
