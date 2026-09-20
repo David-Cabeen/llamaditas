@@ -37,16 +37,29 @@ class WebRTCManager {
   }
 
   getAudioConstraints(deviceId = null) {
-    const baseConstraints = this.otgMode ? {
-      echoCancellation: false,
-      noiseSuppression: false,
-      autoGainControl: false,
-      channelCount: 2
-    } : {
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true
-    };
+    let baseConstraints = {};
+    
+    if (this.otgMode) {
+      // Force raw audio by disabling both standard and hidden Chromium constraints
+      baseConstraints = {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        googEchoCancellation: false,
+        googAutoGainControl: false,
+        googNoiseSuppression: false,
+        googHighpassFilter: false,
+        googTypingNoiseDetection: false,
+        googNoiseReduction: false,
+        channelCount: 2
+      };
+    } else {
+      baseConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true
+      };
+    }
 
     if (deviceId && deviceId !== "default") {
       baseConstraints.deviceId = { exact: deviceId };
@@ -196,13 +209,11 @@ class WebRTCManager {
 
       this.replaceAudioTrackOnAllPeers(newAudioTrack);
 
-      // Re-attach hardware monitor
       if (this.isMonitoring) {
         this.monitorAudioEl.srcObject = this.localStream;
         this.monitorAudioEl.play().catch(e => console.warn(e));
       }
 
-      // Re-attach Web Audio API visualizer/mixer
       if (window.audioMixer) {
         window.audioMixer.attachLocalMic(this.localStream);
       }
