@@ -73,15 +73,6 @@ class SupabaseP2P {
         }
       });
 
-      await this.channel.track({
-        name: this.userName,
-        username: window.syncApp.username, // Actualizado para DMs
-        avatar_url: window.syncApp.avatarUrl,
-        mic: true,
-        cam: false,
-        joinedAt: Date.now()
-      });
-
       // 1. Peer Announce
       this.channel.on("broadcast", { event: "peer-announce" }, ({ payload }) => {
         if (payload && payload.from !== this.peerId) {
