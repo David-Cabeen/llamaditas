@@ -19,14 +19,14 @@
       <div>
         <div class="flex items-center gap-2">
           <span class="font-extrabold tracking-tight text-white text-base">Llamaditas</span>
-          <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Version 6.7</span>
+          <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Version 6.8</span>
         </div>
         <p class="text-xs text-gray-400">Llamada P2P y Youtube sincronizado</p>
       </div>
     </div>
 
-    <!-- Layout Switchers -->
-    <div id="layout-switchers" class="flex items-center bg-black/40 p-1 rounded-xl border border-white/10">
+    <!-- Layout Switchers (Ocultos en Landing) -->
+    <div id="layout-switchers" class="hidden items-center bg-black/40 p-1 rounded-xl border border-white/10">
       <button onclick="window.syncApp.setLayout('studio')" id="btn-layout-studio" class="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-accent text-white shadow-sm flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg>
         Vista Normal
@@ -58,11 +58,16 @@
           <input type="color" id="customColorPicker" value="#8b5cf6" onchange="window.themeManager.setCustomColor(this.value)" class="w-6 h-6 rounded-full overflow-hidden cursor-pointer border-0 p-0 bg-transparent" title="Choose Custom Hex Color">
         </div>
       </div>
-      <div class="h-4 w-px bg-white/10 mx-1"></div>
-      <button onclick="window.syncApp.toggleChat()" class="px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 text-white text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
+      
+      <div id="nav-dividers" class="hidden h-4 w-px bg-white/10 mx-1"></div>
+      
+      <!-- Chat (Oculto en Landing) -->
+      <button id="btn-nav-chat" onclick="window.syncApp.toggleChat()" class="hidden px-3 py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 text-white text-xs font-medium transition items-center gap-1.5 shadow-sm">
         <span>💬 Chat</span>
       </button>
-      <button onclick="window.syncApp.toggleMusicDrawer()" class="px-3 py-1.5 rounded-xl bg-accent/15 border border-accent/30 hover:bg-accent/25 text-white text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
+      
+      <!-- Music Deck (Oculto en Landing) -->
+      <button id="btn-nav-deck" onclick="window.syncApp.toggleMusicDrawer()" class="hidden px-3 py-1.5 rounded-xl bg-accent/15 border border-accent/30 hover:bg-accent/25 text-white text-xs font-medium transition items-center gap-1.5 shadow-sm">
         <svg class="w-4 h-4 custom-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
         <span>Music Deck</span>
       </button>
@@ -100,7 +105,7 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
         </button>
         <div class="pt-4 border-t border-white/10 mt-4">
-          <button onclick="window.syncApp.loginWithProvider()" id="btn-login" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition flex items-center justify-center gap-2">
+          <button onclick="window.syncApp.handleLoginBtnClick()" id="btn-login" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition flex items-center justify-center gap-2">
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>
             <span>Iniciar sesión (Opcional para Stats y Perfil)</span>
           </button>
@@ -130,190 +135,200 @@
       </div>
     </div>
 
-    <!-- MAIN VIEW CONTAINER -->
-    <main class="flex-1 p-6 relative max-w-[1800px] w-full mx-auto flex flex-col">
+    <!-- MAIN APP CONTAINER (Chat Lateral Integrado + Área de Video en la misma capa) -->
+    <div class="flex-1 flex flex-row overflow-hidden relative w-full">
 
-      <!-- ================================================================= -->
-      <!-- LAYOUT 1: STUDIO VIEW -->
-      <!-- ================================================================= -->
-      <div id="layout-studio" class="view-panel flex flex-col gap-4 flex-1">
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 min-h-[480px]">
-          <div id="remote-video-container" class="contents"></div>
-
-          <div class="relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-4 video-tile group min-h-[400px]">
-            <video class="local-video-feed absolute inset-0 w-full h-full object-cover -z-10 opacity-0 transition-opacity duration-300" autoplay playsinline muted></video>
-            
-            <div id="local-cam-off-placeholder" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-gray-900/40 via-black to-black/90">
-              <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 mb-3 glow-subtle">
-                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-              </div>
-              <p class="text-sm font-semibold text-white">Camara desactivada</p>
-              <p class="text-xs text-gray-400 mt-1 max-w-xs">Tu camara está desactivada por defecto por privacidad.</p>
-            </div>
-
-            <div class="flex items-center justify-between z-10">
-              <div class="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span class="local-user-name font-medium text-white">Tú</span>
-                <span class="text-[10px] text-gray-400 font-mono">1080p</span>
-              </div>
-              <div class="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-xs text-gray-300">
-                <span class="text-[11px]">Micrófono:</span>
-                <div class="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div class="local-mic-level-bar h-full bg-accent w-0 transition-all duration-75"></div>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center justify-between z-10">
-              <span class="text-[11px] text-gray-400 bg-black/50 px-2 py-0.5 rounded backdrop-blur-md">Vista Previa Local</span>
-              <span class="text-[11px] text-emerald-400 font-mono bg-black/50 px-2 py-0.5 rounded backdrop-blur-md">Micrófono en Vivo</span>
-            </div>
-          </div>
+      <!-- 5. CHAT SIDEBAR (Misma capa, responsivo) -->
+      <aside id="chat-sidebar" class="h-full w-0 opacity-0 glass border-r border-white/10 shadow-2xl flex flex-col transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0">
+        <div class="flex items-center justify-between border-b border-white/10 p-4">
+          <h3 class="font-bold text-white text-sm tracking-tight flex items-center gap-2">
+            <span>💬 Chat de la Sala</span>
+          </h3>
+          <button onclick="window.syncApp.toggleChat()" class="text-gray-400 hover:text-white p-1 rounded-lg transition">✕</button>
         </div>
 
-        <!-- Floating Bottom Dock Controls -->
-        <div class="glass rounded-2xl p-3 border border-white/10 flex flex-wrap items-center justify-between gap-3 glow-subtle">
-          <div class="flex items-center gap-2">
-            
-            <!-- Mic Toggle Button -->
-            <button id="btn-toggle-mic" onclick="window.syncApp.toggleMic()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition">
-              <svg class="w-4 h-4 text-emerald-400 icon-mic" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
-              <span>Micrófono activo</span>
+        <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col"></div>
+
+        <div class="p-4 border-t border-white/10 bg-black/30">
+          <div class="flex gap-2">
+            <input type="text" id="input-chat" onkeypress="if(event.key === 'Enter') window.syncApp.sendChat()" placeholder="Mensaje o /msg [usuario]..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent transition">
+            <button onclick="window.syncApp.sendChat()" class="px-3 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
             </button>
-            
-            <!-- Animated Custom Mic Dropdown -->
-            <div class="relative" id="mic-selector-container">
-              <button onclick="window.syncApp.toggleMicDropdown()" class="flex items-center justify-between gap-2 bg-black/40 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2 text-xs text-gray-300 w-52 transition-all">
-                <span id="mic-selector-label" class="truncate">Micrófono predeterminado</span>
-                <svg id="mic-selector-arrow" class="w-3.5 h-3.5 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+        </div>
+      </aside>
+
+      <!-- MAIN VIEW CONTAINER -->
+      <main class="flex-1 p-6 relative max-w-[1800px] w-full mx-auto flex flex-col overflow-y-auto">
+
+        <!-- ================================================================= -->
+        <!-- LAYOUT 1: STUDIO VIEW -->
+        <!-- ================================================================= -->
+        <div id="layout-studio" class="view-panel flex flex-col gap-4 flex-1">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1 min-h-[480px]">
+            <div id="remote-video-container" class="contents"></div>
+
+            <div class="relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-4 video-tile group min-h-[400px]">
+              <video class="local-video-feed absolute inset-0 w-full h-full object-cover -z-10 opacity-0 transition-opacity duration-300" autoplay playsinline muted></video>
+              
+              <!-- Placeholder Dinámico para Cámara Local -->
+              <div id="local-cam-off-placeholder" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black transition-colors duration-500">
+              </div>
+
+              <div class="flex items-center justify-between z-10">
+                <div class="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span class="local-user-name font-medium text-white">Tú</span>
+                  <span class="text-[10px] text-gray-400 font-mono">1080p</span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-xs text-gray-300">
+                  <span class="text-[11px]">Micrófono:</span>
+                  <div class="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div class="local-mic-level-bar h-full bg-accent w-0 transition-all duration-75"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center justify-between z-10">
+                <span class="text-[11px] text-gray-400 bg-black/50 px-2 py-0.5 rounded backdrop-blur-md">Vista Previa Local</span>
+                <span class="text-[11px] text-emerald-400 font-mono bg-black/50 px-2 py-0.5 rounded backdrop-blur-md">Micrófono en Vivo</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating Bottom Dock Controls -->
+          <div class="glass rounded-2xl p-3 border border-white/10 flex flex-wrap items-center justify-between gap-3 glow-subtle">
+            <div class="flex items-center gap-2">
+              
+              <!-- Mic Toggle Button -->
+              <button id="btn-toggle-mic" onclick="window.syncApp.toggleMic()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition">
+                <svg class="w-4 h-4 text-emerald-400 icon-mic" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+                <span>Micrófono activo</span>
               </button>
               
-              <!-- Dropdown Menu -->
-              <div id="mic-dropdown-menu" class="absolute bottom-full left-0 mb-2 w-64 bg-[#0f111a] border border-white/10 rounded-xl shadow-2xl overflow-hidden hidden flex-col z-50 origin-bottom">
-                <div class="px-3 py-2 border-b border-white/10 bg-black/40">
-                  <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Seleccionar entrada</span>
-                </div>
-                <div id="mic-options-list" class="max-h-40 overflow-y-auto py-1 custom-scrollbar">
-                  <!-- Options injected via app.js -->
-                </div>
+              <!-- Animated Custom Mic Dropdown -->
+              <div class="relative" id="mic-selector-container">
+                <button onclick="window.syncApp.toggleMicDropdown()" class="flex items-center justify-between gap-2 bg-black/40 border border-white/10 hover:border-white/20 rounded-xl px-3 py-2 text-xs text-gray-300 w-52 transition-all">
+                  <span id="mic-selector-label" class="truncate">Micrófono predeterminado</span>
+                  <svg id="mic-selector-arrow" class="w-3.5 h-3.5 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
                 
-                <!-- NUEVO: Controles OTG y Loopback -->
-                <div class="border-t border-white/10 bg-black/40 p-2 space-y-1">
-                  <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
-                    <span class="text-xs text-gray-300 font-medium">🎸 OTG (Alta Fidelidad)</span>
-                    <input type="checkbox" id="toggle-otg-mode" onchange="window.syncApp.toggleOtgMode(this.checked)" class="accent-accent w-3.5 h-3.5">
-                  </label>
-                  <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
-                    <span class="text-xs text-gray-300 font-medium">🎧 Retorno (Loopback)</span>
-                    <input type="checkbox" id="toggle-loopback" onchange="window.syncApp.toggleLocalMonitor(this.checked)" class="accent-accent w-3.5 h-3.5">
-                  </label>
+                <div id="mic-dropdown-menu" class="absolute bottom-full left-0 mb-2 w-64 bg-[#0f111a] border border-white/10 rounded-xl shadow-2xl overflow-hidden hidden flex-col z-50 origin-bottom">
+                  <div class="px-3 py-2 border-b border-white/10 bg-black/40">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Seleccionar entrada</span>
+                  </div>
+                  <div id="mic-options-list" class="max-h-40 overflow-y-auto py-1 custom-scrollbar"></div>
+                  
+                  <div class="border-t border-white/10 bg-black/40 p-2 space-y-1">
+                    <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
+                      <span class="text-xs text-gray-300 font-medium">🎸 OTG (Alta Fidelidad)</span>
+                      <input type="checkbox" id="toggle-otg-mode" onchange="window.syncApp.toggleOtgMode(this.checked)" class="accent-accent w-3.5 h-3.5">
+                    </label>
+                    <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
+                      <span class="text-xs text-gray-300 font-medium">🎧 Retorno (Loopback)</span>
+                      <input type="checkbox" id="toggle-loopback" onchange="window.syncApp.toggleLocalMonitor(this.checked)" class="accent-accent w-3.5 h-3.5">
+                    </label>
+                  </div>
                 </div>
               </div>
+
+              <!-- Cam Toggle -->
+              <button id="btn-toggle-cam" onclick="window.syncApp.toggleCam()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition">
+                <svg class="w-4 h-4 icon-cam" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                <span>Cámara apagada</span>
+              </button>
+
+              <!-- Screen Share -->
+              <button id="btn-screenshare" onclick="window.syncApp.toggleScreenShare()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition" title="Compartir pantalla + audio del sistema">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <span class="hidden sm:inline">Compartir pantalla</span>
+              </button>
             </div>
 
-            <!-- Cam Toggle -->
-            <button id="btn-toggle-cam" onclick="window.syncApp.toggleCam()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition">
-              <svg class="w-4 h-4 icon-cam" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-              <span>Cámara apagada</span>
-            </button>
-
-            <!-- Screen Share -->
-            <button id="btn-screenshare" onclick="window.syncApp.toggleScreenShare()" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition" title="Compartir pantalla + audio del sistema">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-              <span class="hidden sm:inline">Compartir pantalla</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button onclick="window.syncApp.toggleMixerModal()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                <span>Mezclador</span>
+              </button>
+              
+              <button onclick="window.syncApp.leaveCall()" class="px-3.5 py-2 rounded-xl bg-red-600/80 hover:bg-red-600 text-white text-xs font-medium transition flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
+                <span>Salir</span>
+              </button>
+            </div>
           </div>
+        </div>
 
-          <div class="flex items-center gap-2">
-            <button onclick="window.syncApp.toggleMixerModal()" class="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition flex items-center gap-1.5">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-              <span>Mezclador</span>
-            </button>
+        <!-- ================================================================= -->
+        <!-- LAYOUT 3: SCREENSHARE VIEW -->
+        <!-- ================================================================= -->
+        <div id="layout-screenshare" class="view-panel hidden flex-1 flex gap-4 h-full min-h-[520px]">
+          <div class="w-56 flex flex-col gap-3 overflow-y-auto custom-scrollbar bg-black/40 p-3 rounded-2xl border border-white/10">
+            <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">Miembros</div>
+            <div id="screenshare-sidebar" class="flex flex-col gap-3"></div>
+          </div>
+          
+          <div class="flex-1 rounded-2xl overflow-hidden glass border border-white/10 bg-black relative flex flex-col">
+            <div class="absolute top-4 left-4 z-10 glass px-3 py-1.5 rounded-lg flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+              <span id="screenshare-active-name" class="text-xs font-bold text-white">Pantalla Compartida</span>
+            </div>
             
-            <button onclick="window.syncApp.leaveCall()" class="px-3.5 py-2 rounded-xl bg-red-600/80 hover:bg-red-600 text-white text-xs font-medium transition flex items-center gap-1.5">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
-              <span>Salir</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ================================================================= -->
-      <!-- LAYOUT 3: SCREENSHARE VIEW -->
-      <!-- ================================================================= -->
-      <div id="layout-screenshare" class="view-panel hidden flex-1 flex gap-4 h-full min-h-[520px]">
-        
-        <!-- Left Sidebar for Members -->
-        <div class="w-56 flex flex-col gap-3 overflow-y-auto custom-scrollbar bg-black/40 p-3 rounded-2xl border border-white/10">
-          <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1">Miembros</div>
-          <div id="screenshare-sidebar" class="flex flex-col gap-3"></div>
-        </div>
-        
-        <!-- Main Uncropped Screen Share Area -->
-        <div class="flex-1 rounded-2xl overflow-hidden glass border border-white/10 bg-black relative flex flex-col">
-          <div class="absolute top-4 left-4 z-10 glass px-3 py-1.5 rounded-lg flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
-            <span id="screenshare-active-name" class="text-xs font-bold text-white">Pantalla Compartida</span>
-          </div>
-          
-          <div id="screenshare-main" class="flex-1 w-full h-full p-2">
-            <div class="w-full h-full flex flex-col items-center justify-center text-gray-500 text-sm">
-              <svg class="w-12 h-12 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-              Nadie está compartiendo pantalla
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Persistent YouTube "theater portal". -->
-      <div id="hidden-audio-container" style="position:fixed; top:-9999px; left:-9999px; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none; z-index:20;">
-        <div id="yt-player-target" class="w-full h-full"></div>
-      </div>
-
-      <!-- ================================================================= -->
-      <!-- LAYOUT 2: CINEMA THEATER -->
-      <!-- ================================================================= -->
-      <div id="layout-cinema" class="view-panel hidden flex-1 flex flex-col gap-4">
-        <div id="cinema-fullscreen-container" class="relative w-full flex-1 rounded-2xl overflow-hidden glass border border-white/10 flex flex-col p-6 bg-black min-h-[520px]">
-          
-          <div class="flex items-center justify-between z-10 mb-4">
-            <div class="glass px-4 py-2 rounded-xl flex items-center gap-3">
-              <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-              <div>
-                <h3 class="text-sm font-bold text-white">Modo teatro</h3>
-                <p class="text-xs text-gray-400">Video sincronizado de YouTube</p>
+            <div id="screenshare-main" class="flex-1 w-full h-full p-2">
+              <div class="w-full h-full flex flex-col items-center justify-center text-gray-500 text-sm">
+                <svg class="w-12 h-12 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                Nadie está compartiendo pantalla
               </div>
             </div>
-            
-            <div class="flex items-center gap-2">
-              <button onclick="window.syncApp.toggleCinemaFullscreen()" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs transition flex items-center gap-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
-                <span>Pantalla completa</span>
-              </button>
-              <button onclick="window.syncApp.toggleMusicDrawer()" class="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold">
-                Abrir cola
-              </button>
-              <button onclick="window.syncApp.setLayout('studio')" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white transition">
-                Salir del modo teatro
-              </button>
-            </div>
           </div>
-
-          <!-- Escenario de Video con bordes redondeados y controles nativos de YouTube habilitados -->
-          <div class="relative flex-1 w-full rounded-xl overflow-hidden bg-black border border-white/10 shadow-2xl">
-            <div id="cinema-video-container" class="absolute inset-0 w-full h-full"></div>
-          </div>
-
         </div>
-      </div>
 
-    </main>
+        <div id="hidden-audio-container" style="position:fixed; top:-9999px; left:-9999px; width:1px; height:1px; opacity:0; overflow:hidden; pointer-events:none; z-index:20;">
+          <div id="yt-player-target" class="w-full h-full"></div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- LAYOUT 2: CINEMA THEATER -->
+        <!-- ================================================================= -->
+        <div id="layout-cinema" class="view-panel hidden flex-1 flex flex-col gap-4">
+          <div id="cinema-fullscreen-container" class="relative w-full flex-1 rounded-2xl overflow-hidden glass border border-white/10 flex flex-col p-6 bg-black min-h-[520px]">
+            
+            <div class="flex items-center justify-between z-10 mb-4">
+              <div class="glass px-4 py-2 rounded-xl flex items-center gap-3">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                <div>
+                  <h3 class="text-sm font-bold text-white">Modo teatro</h3>
+                  <p class="text-xs text-gray-400">Video sincronizado de YouTube</p>
+                </div>
+              </div>
+              
+              <div class="flex items-center gap-2">
+                <button onclick="window.syncApp.toggleCinemaFullscreen()" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs transition flex items-center gap-1.5">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                  <span>Pantalla completa</span>
+                </button>
+                <button onclick="window.syncApp.toggleMusicDrawer()" class="px-3 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold">
+                  Abrir cola
+                </button>
+                <button onclick="window.syncApp.setLayout('studio')" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-white transition">
+                  Salir del modo teatro
+                </button>
+              </div>
+            </div>
+
+            <div class="relative flex-1 w-full rounded-xl overflow-hidden bg-black border border-white/10 shadow-2xl">
+              <div id="cinema-video-container" class="absolute inset-0 w-full h-full"></div>
+            </div>
+
+          </div>
+        </div>
+
+      </main>
+    </div>
   </div>
 
-  <!-- ===================================================================== -->
   <!-- 3. SLIDE-IN RIGHT DRAWER FOR YOUTUBE DJ DOCK -->
-  <!-- ===================================================================== -->
   <div id="youtube-drawer-backdrop" onclick="window.syncApp.toggleMusicDrawer()" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 hidden transition-opacity"></div>
 
   <aside id="youtube-slide-drawer" class="fixed top-0 right-0 h-full w-[440px] max-w-[90vw] z-50 glass border-l border-white/10 shadow-2xl p-6 flex flex-col gap-4 transform translate-x-full transition-transform duration-300 ease-in-out">
@@ -337,24 +352,22 @@
       </div>
       <div>
         <h4 class="text-sm font-semibold text-white">El music deck está en reposo</h4>
-        <p class="text-xs text-gray-400 mt-1">El reproductor se apaga por defecto para ahorrar el 100% de recursos de CPU y GPU. Enciéndelo cuando estés listo para escuchar.</p>
+        <p class="text-xs text-gray-400 mt-1">El reproductor se apaga por defecto para ahorrar recursos de CPU y GPU. Enciéndelo cuando estés listo.</p>
       </div>
       <button onclick="window.ytSync.togglePower()" class="px-4 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition glow-accent">
         Encender cabina
       </button>
     </div>
 
-    <!-- Active Audio-Only Deck Section -->
     <div id="deck-active-card" class="hidden flex flex-col gap-4 flex-1 overflow-y-auto pr-1">
       
-      <!-- Educational Banner for Bluetooth Users -->
       <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mb-1 text-left">
         <p class="text-[11px] font-bold text-blue-400">¿El audio suena apagado?</p>
-        <p class="text-[10px] text-blue-200/70 mt-1">Los audífonos Bluetooth bajan su calidad de audio durante las llamadas. Selecciona el micrófono integrado de tu PC en el menú inferior para solucionarlo.</p>
+        <p class="text-[10px] text-blue-200/70 mt-1">Los audífonos Bluetooth bajan su calidad de audio durante las llamadas. Selecciona el micrófono integrado de tu PC en el menú inferior.</p>
       </div>
 
       <div class="relative rounded-xl overflow-hidden bg-black border border-white/10 aspect-square w-full max-w-[220px] mx-auto glow-subtle">
-        <img class="now-playing-art w-full h-full object-cover" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80" alt="Carátula de la pista actual">
+        <img class="now-playing-art w-full h-full object-cover" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80" alt="Carátula actual">
         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-transparent"></div>
         <div class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -369,7 +382,6 @@
         <p class="now-playing-author text-xs text-gray-400">Pega un enlace de YouTube abajo para empezar</p>
       </div>
 
-      <!-- Barra de progreso interactiva -->
       <div class="space-y-1">
         <div class="w-full bg-white/10 h-1.5 rounded-full overflow-hidden cursor-pointer" onclick="window.ytSync.seekFromProgressBar(event, this)">
           <div class="playback-bar-fill bg-accent h-full w-0 rounded-full pointer-events-none transition-all"></div>
@@ -431,7 +443,7 @@
           </div>
           <div>
             <h3 class="text-base font-bold text-white">Mezclador de audio multicanal</h3>
-            <p class="text-xs text-gray-400">Regula el volumen de cada persona y de la música por separado</p>
+            <p class="text-xs text-gray-400">Regula el volumen de cada persona y de la música</p>
           </div>
         </div>
         <button onclick="window.syncApp.toggleMixerModal()" class="text-gray-400 hover:text-white p-1 rounded-lg">✕</button>
@@ -447,36 +459,63 @@
     </div>
   </div>
 
+  <!-- 6. USER PROFILE MODAL -->
+  <div id="modal-profile" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] hidden flex items-center justify-center p-4">
+    <div class="glass border border-white/20 rounded-3xl max-w-lg w-full p-8 shadow-2xl relative">
+      <button onclick="window.syncApp.closeProfile()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl bg-white/5 transition">✕</button>
+      
+      <div class="flex flex-col items-center mb-6 relative group">
+        <div class="w-24 h-24 rounded-full border-2 border-accent overflow-hidden mb-3 relative">
+          <img id="profile-modal-avatar" src="" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center cursor-pointer" onclick="document.getElementById('input-avatar-url').classList.toggle('hidden')">
+             <span class="text-[10px] font-bold text-white">Cambiar</span>
+          </div>
+        </div>
+        <h3 id="profile-modal-name" class="text-xl font-bold text-white tracking-tight">Usuario</h3>
+        <p class="text-xs text-gray-400">Usuario Registrado</p>
+        
+        <div id="input-avatar-url" class="hidden w-full mt-4 flex gap-2">
+           <input type="text" id="avatar-url-field" placeholder="Pega el enlace directo a una imagen..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-accent transition">
+           <button onclick="window.syncApp.updateProfilePicture()" class="px-3 py-2 rounded-xl bg-accent text-white text-xs font-semibold">Guardar</button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+          <p class="text-xs text-gray-400 mb-1">Llamadas Totales</p>
+          <p id="profile-stat-calls" class="text-2xl font-bold text-accent font-mono">0</p>
+        </div>
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+          <p class="text-xs text-gray-400 mb-1">Minutos Hablados</p>
+          <p id="profile-stat-time" class="text-2xl font-bold text-emerald-400 font-mono">0</p>
+        </div>
+      </div>
+
+      <div class="bg-black/30 border border-white/10 rounded-2xl p-4 flex items-center justify-between mb-6">
+        <div>
+           <p class="text-[10px] font-bold text-accent uppercase tracking-wider mb-1">Compartiste más con</p>
+           <a href="#" id="profile-top-friend-link" class="text-sm font-semibold text-white hover:underline">---</a>
+        </div>
+        <img id="profile-top-friend-avatar" src="https://ui-avatars.com/api/?name=?&background=random" class="w-10 h-10 rounded-full border border-white/10 object-cover">
+      </div>
+
+      <div class="flex items-center gap-3 pt-4 border-t border-white/10">
+        <button onclick="window.syncApp.logout()" class="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition">
+          Cerrar Sesión
+        </button>
+        <button onclick="window.syncApp.deleteAccount()" class="px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500 border border-red-500/40 text-red-400 hover:text-white text-xs font-medium transition">
+          Eliminar Cuenta
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="chat-toast-container" class="fixed bottom-24 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
   <div id="toast-notification" class="fixed bottom-6 right-6 z-50 glass border border-white/15 px-4 py-3 rounded-2xl text-xs text-white shadow-2xl flex items-center gap-2.5 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none">
     <span class="w-2 h-2 rounded-full bg-accent"></span>
     <span id="toast-msg">Mensaje de notificación</span>
   </div>
-
-  <!-- 5. CHAT SIDEBAR & TOASTS -->
-  <aside id="chat-sidebar" class="fixed top-[60px] left-0 h-[calc(100vh-60px)] w-0 opacity-0 z-40 glass border-r border-white/10 shadow-2xl flex flex-col transition-all duration-300 ease-in-out overflow-hidden">
-    <div class="flex items-center justify-between border-b border-white/10 p-4">
-      <h3 class="font-bold text-white text-sm tracking-tight flex items-center gap-2">
-        <span>💬 Chat de la Sala</span>
-      </h3>
-      <button onclick="window.syncApp.toggleChat()" class="text-gray-400 hover:text-white p-1 rounded-lg transition">✕</button>
-    </div>
-
-    <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar flex flex-col">
-      <!-- Los mensajes aparecerán aquí -->
-    </div>
-
-    <div class="p-4 border-t border-white/10 bg-black/30">
-      <div class="flex gap-2">
-        <input type="text" id="input-chat" onkeypress="if(event.key === 'Enter') window.syncApp.sendChat()" placeholder="Mensaje o /msg [usuario]..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent transition">
-        <button onclick="window.syncApp.sendChat()" class="px-3 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-        </button>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Contenedor flotante para alertas de mensajes cerrados -->
-  <div id="chat-toast-container" class="fixed bottom-24 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <script src="./js/theme.js"></script>
   <script src="./js/audio_mixer.js"></script>

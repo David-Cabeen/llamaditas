@@ -19,12 +19,13 @@ class SyncWaveApp {
     this.username = null;
     this.avatarUrl = null;
     this.callStartTime = 0;
+    this.stats = { totalCalls: 0, totalTimeSec: 0, topFriendName: '', topFriendAvatar: '', topFriendLink: '#' };
 
     this.init();
   }
 
   init() {
-    this.initAuth(); // Inicializar Autenticación al cargar la página instantáneamente
+    this.initAuth();
 
     const params = new URLSearchParams(window.location.search);
     const roomFromUrl = params.get("room");
@@ -59,11 +60,6 @@ class SyncWaveApp {
     window.webrtcManager.onRemotePeerDisconnected = (peerId) => {
       this.handlePeerDisconnected(peerId);
     };
-
-    const sbUrlInput = document.getElementById("input-sb-url");
-    const sbKeyInput = document.getElementById("input-sb-key");
-    if (sbUrlInput) sbUrlInput.value = window.supabaseP2P.supabaseUrl;
-    if (sbKeyInput) sbKeyInput.value = window.supabaseP2P.supabaseKey;
 
     document.addEventListener("click", (e) => {
       if (this.isMicDropdownOpen && !e.target.closest("#mic-selector-container")) {
@@ -108,11 +104,19 @@ class SyncWaveApp {
     const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?room=${this.roomId}`;
     window.history.pushState({ path: newUrl }, "", newUrl);
 
+    // Revelar controles de navegación en el header
+    document.getElementById("layout-switchers").classList.remove("hidden");
+    document.getElementById("layout-switchers").classList.add("flex");
+    document.getElementById("btn-nav-chat").classList.remove("hidden");
+    document.getElementById("btn-nav-chat").classList.add("flex");
+    document.getElementById("btn-nav-deck").classList.remove("hidden");
+    document.getElementById("btn-nav-deck").classList.add("flex");
+    document.getElementById("nav-dividers").classList.remove("hidden");
+
     document.getElementById("landing-screen").classList.add("hidden");
     document.getElementById("call-screen").classList.remove("hidden");
     document.getElementById("display-room-code").innerText = this.roomId;
 
-    // Inicializar rastreo de estadísticas
     this.callStartTime = Date.now();
     this.updateStat('total_calls');
 
@@ -138,6 +142,70 @@ class SyncWaveApp {
     }, 60000);
   }
 
+  // ============== CAMERA OFF DYNAMIC PLACEHOLDERS ==================
+
+  updateCamPlaceholder() {
+    const placeholder = document.getElementById("local-cam-off-placeholder");
+    const videoFeed = document.querySelector(".local-video-feed");
+    if (placeholder && videoFeed) {
+      if (this.isCamOn) {
+        placeholder.style.opacity = "0";
+        setTimeout(() => placeholder.classList.add("hidden"), 300);
+        videoFeed.classList.remove("opacity-0");
+      } else {
+        placeholder.classList.remove("hidden");
+        placeholder.style.opacity = "1";
+        videoFeed.classList.add("opacity-0");
+        this.renderCamOffPlaceholder(placeholder, this.avatarUrl, 'local-cam');
+      }
+    }
+  }
+
+  renderCamOffPlaceholder(container, avatar, idPrefix) {
+    if (avatar && this.session) {
+      container.innerHTML = `
+        <img src="${avatar}" id="${idPrefix}-img" class="w-24 h-24 rounded-full object-cover shadow-2xl border-2 border-white/20 mb-3" crossorigin="anonymous">
+        <p class="text-sm font-semibold text-white">Cámara desactivada</p>
+      `;
+      this.extractProminentColor(avatar, container.id);
+    } else {
+      container.style.backgroundColor = "#000000";
+      container.innerHTML = `
+        <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 mb-3 glow-subtle">
+          <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        </div>
+        <p class="text-sm font-semibold text-white">Cámara desactivada</p>
+        <p class="text-xs text-gray-500 mt-1">Usuario Invitado</p>
+      `;
+    }
+  }
+
+  extractProminentColor(imgSrc, containerId) {
+    if (!imgSrc) return;
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      try {
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let r=0, g=0, b=0, count=0;
+        for(let i=0; i<data.length; i+=32) { 
+          r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+        }
+        r = Math.floor(r/count); g = Math.floor(g/count); b = Math.floor(b/count);
+        const el = document.getElementById(containerId);
+        if (el) el.style.backgroundColor = `rgba(${r},${g},${b}, 0.5)`;
+      } catch(e) { console.warn("CORS blocked color extraction"); }
+    };
+    img.src = imgSrc;
+  }
+
+  // =================================================================
+
   toggleMicDropdown(forceState) {
     this.isMicDropdownOpen = forceState !== undefined ? forceState : !this.isMicDropdownOpen;
     const menu = document.getElementById("mic-dropdown-menu");
@@ -158,7 +226,6 @@ class SyncWaveApp {
 
   toggleOtgMode(checked) {
     window.webrtcManager.setOtgMode(checked);
-    // Restart the mic capture to apply the raw audio constraints
     window.webrtcManager.switchMicrophone(this.activeMicId);
     this.showToast(checked ? "🎸 Modo OTG activado: Audio crudo sin compresión" : "🎙️ Procesamiento de voz estándar activado");
   }
@@ -251,8 +318,7 @@ class SyncWaveApp {
   onPeerJoined(peerId, info) {
     if (this.remotePeers.has(peerId)) return;
     const peerName = info.name || "Amigo";
-    console.log(`[App] Adding remote peer ${peerName} (${peerId})`);
-    this.remotePeers.set(peerId, { name: peerName, username: info.username, mic: info.mic !== false, cam: info.cam === true });
+    this.remotePeers.set(peerId, { name: peerName, username: info.username, avatar_url: info.avatar_url, mic: info.mic !== false, cam: info.cam === true });
     window.webrtcManager.getOrCreatePeer(peerId, info);
     this.showToast(`${peerName} se unió a la llamada`);
     this.renderVideoTiles();
@@ -276,51 +342,27 @@ class SyncWaveApp {
 
     if (action === "play") {
       if (!yt.isDeckActive) yt.togglePower();
-      yt.handleServerState({
-        queue: yt.queue,
-        currentIndex: yt.currentIndex,
-        isPlaying: true,
-        positionSec: payload.position || 0
-      }, fromPeerId, action);
+      yt.handleServerState({ queue: yt.queue, currentIndex: yt.currentIndex, isPlaying: true, positionSec: payload.position || 0 }, fromPeerId, action);
     } else if (action === "pause") {
-      yt.handleServerState({
-        queue: yt.queue,
-        currentIndex: yt.currentIndex,
-        isPlaying: false,
-        positionSec: payload.position || 0
-      }, fromPeerId, action);
+      yt.handleServerState({ queue: yt.queue, currentIndex: yt.currentIndex, isPlaying: false, positionSec: payload.position || 0 }, fromPeerId, action);
     } else if (action === "seek") {
-      yt.handleServerState({
-        queue: yt.queue,
-        currentIndex: yt.currentIndex,
-        isPlaying: payload.isPlaying !== undefined ? payload.isPlaying : yt.isPlaying,
-        positionSec: payload.position || 0
-      }, fromPeerId, action);
+      yt.handleServerState({ queue: yt.queue, currentIndex: yt.currentIndex, isPlaying: payload.isPlaying !== undefined ? payload.isPlaying : yt.isPlaying, positionSec: payload.position || 0 }, fromPeerId, action);
     } else if (action === "add-track") {
       if (payload.track) {
         yt.queue.push(payload.track);
         yt.renderQueueUI();
-        if (yt.queue.length === 1 && yt.isDeckActive) {
-          yt.selectTrackLocally(0);
-        }
+        if (yt.queue.length === 1 && yt.isDeckActive) yt.selectTrackLocally(0);
       }
     } else if (action === "add-multiple") {
       if (payload.tracks && payload.tracks.length > 0) {
         const wasEmpty = yt.queue.length === 0;
         yt.queue.push(...payload.tracks);
         yt.renderQueueUI();
-        if (wasEmpty && yt.isDeckActive) {
-          yt.selectTrackLocally(0);
-        }
+        if (wasEmpty && yt.isDeckActive) yt.selectTrackLocally(0);
       }
     } else if (action === "select-track") {
       yt.currentIndex = payload.index || 0;
-      yt.handleServerState({
-        queue: yt.queue,
-        currentIndex: yt.currentIndex,
-        isPlaying: true,
-        positionSec: 0
-      }, fromPeerId, action);
+      yt.handleServerState({ queue: yt.queue, currentIndex: yt.currentIndex, isPlaying: true, positionSec: 0 }, fromPeerId, action);
     } else if (action === "next-track") {
       yt.skipNext();
     } else if (action === "prev-track") {
@@ -329,9 +371,7 @@ class SyncWaveApp {
       const idx = payload.index;
       if (idx >= 0 && idx < yt.queue.length) {
         yt.queue.splice(idx, 1);
-        if (yt.currentIndex >= yt.queue.length) {
-          yt.currentIndex = Math.max(0, yt.queue.length - 1);
-        }
+        if (yt.currentIndex >= yt.queue.length) yt.currentIndex = Math.max(0, yt.queue.length - 1);
         yt.renderQueueUI();
       }
     } else if (action === "reorder") {
@@ -451,11 +491,12 @@ class SyncWaveApp {
           const tile = document.createElement("div");
           tile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-4 video-tile group min-h-[400px]";
           tile.id = `peer-tile-${peerId}`;
-
           const vol = window.audioMixer.getPeerVolume(peerId);
 
           tile.innerHTML = `
-            <video id="video-stream-${peerId}" autoplay playsinline class="absolute inset-0 w-full h-full object-cover -z-10"></video>
+            <video id="video-stream-${peerId}" autoplay playsinline class="absolute inset-0 w-full h-full object-cover -z-10 transition-opacity duration-300 ${p.cam ? 'opacity-100' : 'opacity-0'}"></video>
+            
+            <div id="cam-off-${peerId}" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-black transition-opacity duration-500 ${p.cam ? 'opacity-0 hidden' : 'opacity-100'}"></div>
             
             <div class="flex items-center justify-between z-10">
               <div class="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 text-xs">
@@ -483,8 +524,9 @@ class SyncWaveApp {
               <div></div>
             </div>
           `;
-
           remoteContainer.appendChild(tile);
+
+          this.renderCamOffPlaceholder(document.getElementById(`cam-off-${peerId}`), p.avatar_url, `remote-cam-${peerId}`);
 
           if (p.stream) {
             const vid = tile.querySelector(`#video-stream-${peerId}`);
@@ -535,7 +577,7 @@ class SyncWaveApp {
       <div class="flex justify-between items-center">
         <div class="flex items-center gap-2">
           <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
-          <span class="text-xs font-semibold text-white">Música sincronizada de YouTube</span>
+          <span class="text-xs font-semibold text-white">Música de YouTube</span>
         </div>
         <span id="mixer-disp-music-vol" class="text-xs font-mono custom-accent">${musicVol}%</span>
       </div>
@@ -564,22 +606,6 @@ class SyncWaveApp {
       `;
       list.appendChild(chan);
     });
-
-    const micChan = document.createElement("div");
-    micChan.className = "p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2";
-    micChan.innerHTML = `
-      <div class="flex justify-between items-center">
-        <div class="flex items-center gap-2">
-          <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
-          <span class="text-xs font-semibold text-white">Sensibilidad de tu micrófono</span>
-        </div>
-        <span class="text-xs font-mono text-gray-400">Activo</span>
-      </div>
-      <div class="w-full bg-white/10 h-2 rounded-full overflow-hidden">
-        <div class="local-mic-level-bar bg-accent h-full w-0 transition-all duration-75"></div>
-      </div>
-    `;
-    list.appendChild(micChan);
   }
 
   onMusicVolumeSlider(val) {
@@ -596,10 +622,8 @@ class SyncWaveApp {
 
   onPeerVolumeSlider(peerId, val) {
     window.audioMixer.setPeerVolume(peerId, val);
-
     const overlay = document.getElementById(`overlay-vol-${peerId}`);
     if (overlay) overlay.innerText = `${val}%`;
-
     const mixerDisp = document.getElementById(`mixer-disp-peer-vol-${peerId}`);
     if (mixerDisp) mixerDisp.innerText = `${val}%`;
   }
@@ -612,7 +636,6 @@ class SyncWaveApp {
   toggleMic() {
     this.isMicOn = !this.isMicOn;
     window.webrtcManager.toggleAudio(this.isMicOn);
-
     const btn = document.getElementById("btn-toggle-mic");
     const label = btn.querySelector("span");
     const icon = btn.querySelector(".icon-mic");
@@ -626,10 +649,7 @@ class SyncWaveApp {
       label.innerText = "Micrófono apagado";
       icon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>`;
     }
-
-    if (this.isUsingSupabase) {
-      window.supabaseP2P.sendUserState(this.isMicOn, this.isCamOn, false);
-    }
+    if (this.isUsingSupabase) window.supabaseP2P.sendUserState(this.isMicOn, this.isCamOn, false);
   }
 
   toggleCam() {
@@ -647,27 +667,12 @@ class SyncWaveApp {
     const btn = document.getElementById("btn-toggle-cam");
     if (!btn) return;
     const label = btn.querySelector("span");
-
     if (isOn) {
       btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition";
       label.innerText = "Cámara encendida";
     } else {
       btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition";
       label.innerText = "Cámara apagada";
-    }
-  }
-
-  updateCamPlaceholder() {
-    const placeholder = document.getElementById("local-cam-off-placeholder");
-    const videoFeed = document.querySelector(".local-video-feed");
-    if (placeholder && videoFeed) {
-      if (this.isCamOn) {
-        placeholder.classList.add("hidden");
-        videoFeed.classList.remove("opacity-0");
-      } else {
-        placeholder.classList.remove("hidden");
-        videoFeed.classList.add("opacity-0");
-      }
     }
   }
 
@@ -690,17 +695,12 @@ class SyncWaveApp {
   }
 
   async toggleScreenShare() {
-    if (navigator.userAgent.toLowerCase().includes("firefox") && !this.isScreenSharing) {
-      if (window.syncApp) {
-        window.syncApp.showToast("Firefox bloquea el audio de pantalla. Usa Chrome/Edge o la cabina de YouTube.");
-      }
-    }
     const active = await window.webrtcManager.toggleScreenShare();
     const btn = document.getElementById("btn-screenshare");
     
     if (active) {
       btn.className = "flex items-center gap-2 px-3.5 py-2 rounded-xl bg-accent text-white text-xs font-medium transition glow-accent";
-      this.showToast("Compartiendo pantalla completa con audio del sistema");
+      this.showToast("Compartiendo pantalla completa");
       if (this.isUsingSupabase) window.supabaseP2P.sendScreenShareState(true);
       this.localScreenStream = window.webrtcManager.screenStream; 
       this.setLayout('screenshare');
@@ -724,8 +724,24 @@ class SyncWaveApp {
     if (this.remotePeers.has(from)) {
       const p = this.remotePeers.get(from);
       if (mic !== undefined) p.mic = mic;
-      if (cam !== undefined) p.cam = cam;
       if (speaking !== undefined) this.updatePeerSpeakingState(from, speaking);
+      
+      if (cam !== undefined) {
+        p.cam = cam;
+        const vidEl = document.getElementById(`video-stream-${from}`);
+        const offEl = document.getElementById(`cam-off-${from}`);
+        if (vidEl && offEl) {
+          if (cam) {
+            vidEl.classList.remove("opacity-0");
+            offEl.style.opacity = "0";
+            setTimeout(() => offEl.classList.add("hidden"), 300);
+          } else {
+            vidEl.classList.add("opacity-0");
+            offEl.classList.remove("hidden");
+            offEl.style.opacity = "1";
+          }
+        }
+      }
     }
   }
 
@@ -745,7 +761,6 @@ class SyncWaveApp {
   setLayout(layout) {
     this.currentLayout = layout;
     const layouts = ["studio", "cinema", "screenshare"];
-    
     layouts.forEach(l => {
       const el = document.getElementById(`layout-${l}`);
       const btn = document.getElementById(`btn-layout-${l}`);
@@ -757,7 +772,6 @@ class SyncWaveApp {
         if (btn) btn.className = "px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
       }
     });
-
     this.positionTheaterPortal();
     this.renderVideoTiles();
   }
@@ -766,7 +780,6 @@ class SyncWaveApp {
     const portal = document.getElementById("hidden-audio-container");
     const slot = document.getElementById("cinema-video-container");
     if (!portal || !slot) return;
-
     if (this.currentLayout === "cinema") {
       const rect = slot.getBoundingClientRect();
       if (rect.width < 2 || rect.height < 2) {
@@ -774,23 +787,15 @@ class SyncWaveApp {
         return;
       }
       Object.assign(portal.style, {
-        top: `${rect.top}px`,
-        left: `${rect.left}px`,
-        width: `${rect.width}px`,
-        height: `${rect.height}px`,
-        opacity: "1",
-        pointerEvents: "auto",
-        borderRadius: "0.75rem"
+        top: `${rect.top}px`, left: `${rect.left}px`,
+        width: `${rect.width}px`, height: `${rect.height}px`,
+        opacity: "1", pointerEvents: "auto", borderRadius: "0.75rem"
       });
     } else {
       Object.assign(portal.style, {
-        top: "-9999px",
-        left: "-9999px",
-        width: "1px",
-        height: "1px",
-        opacity: "0",
-        pointerEvents: "none",
-        borderRadius: "0"
+        top: "-9999px", left: "-9999px",
+        width: "1px", height: "1px",
+        opacity: "0", pointerEvents: "none", borderRadius: "0"
       });
     }
   }
@@ -798,17 +803,15 @@ class SyncWaveApp {
   toggleCinemaFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
-        console.warn(`Error al intentar activar pantalla completa: ${err.message}`);
+        console.warn(`Error pantalla completa: ${err.message}`);
       });
-    } else {
-      document.exitFullscreen();
-    }
+    } else document.exitFullscreen();
   }
 
   copyInviteLink() {
     const inviteUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?room=${this.roomId}`;
     navigator.clipboard.writeText(inviteUrl);
-    this.showToast("Enlace de invitación copiado al portapapeles");
+    this.showToast("Enlace copiado al portapapeles");
   }
 
   copyRoomCode() {
@@ -816,31 +819,15 @@ class SyncWaveApp {
     this.showToast(`Código de sala ${this.roomId} copiado`);
   }
 
-  toggleMixerModal() {
-    document.getElementById("modal-mixer").classList.toggle("hidden");
-  }
-
-  toggleSupabaseModal() {
-    document.getElementById("modal-supabase").classList.toggle("hidden");
-  }
-
-  saveSupabaseSettings() {
-    const url = document.getElementById("input-sb-url").value;
-    const key = document.getElementById("input-sb-key").value;
-    window.supabaseP2P.saveCredentials(url, key);
-    this.toggleSupabaseModal();
-    this.showToast("Credenciales de Supabase guardadas");
-    if (this.roomId) {
-      window.supabaseP2P.leave();
-      this.connectSupabase();
-    }
-  }
-
+  toggleMixerModal() { document.getElementById("modal-mixer").classList.toggle("hidden"); }
+  
   leaveCall() {
     window.webrtcManager.closeAll();
     window.supabaseP2P.leave();
     window.location.href = window.location.pathname;
   }
+
+  // =================== AUTHENTICATION Y PERFIL =====================
 
   async initAuth() {
     if (!window.supabaseClient) return;
@@ -852,37 +839,117 @@ class SyncWaveApp {
       this.userName = this.username;
       
       const btn = document.getElementById("btn-login");
-      if (btn) btn.innerHTML = `<img src="${this.avatarUrl}" class="w-5 h-5 rounded-full object-cover"> <span>Logueado como ${this.username}</span>`;
+      if (btn) btn.innerHTML = `<img src="${this.avatarUrl}" class="w-5 h-5 rounded-full object-cover"> <span>Ver Perfil</span>`;
       
       const nameInput = document.getElementById("input-user-name");
       if (nameInput) nameInput.value = this.userName;
+      
+      this.loadUserStats();
     }
   }
 
+  handleLoginBtnClick() {
+    if (this.session) this.openProfile();
+    else this.loginWithProvider();
+  }
+
   async loginWithProvider() {
-    if (this.session) return;
     if (!window.supabaseClient) return;
     await window.supabaseClient.auth.signInWithOAuth({ provider: 'google' });
+  }
+
+  async logout() {
+    if (window.supabaseClient) await window.supabaseClient.auth.signOut();
+    window.location.reload();
+  }
+
+  async deleteAccount() {
+    const confirmDelete = confirm("¿Estás seguro de que deseas eliminar tu cuenta permanentemente? Esto borrará tus estadísticas y datos. Esta acción no se puede deshacer.");
+    if (confirmDelete && window.supabaseClient) {
+      try {
+        await window.supabaseClient.rpc('delete_user_account');
+        await window.supabaseClient.auth.signOut();
+        window.location.reload();
+      } catch (err) {
+        this.showToast("Error al eliminar la cuenta.");
+      }
+    }
+  }
+
+  openProfile() {
+    document.getElementById("profile-modal-name").innerText = this.userName;
+    document.getElementById("profile-modal-avatar").src = this.avatarUrl || "https://ui-avatars.com/api/?name=?&background=random";
+    document.getElementById("profile-stat-calls").innerText = this.stats.totalCalls;
+    document.getElementById("profile-stat-time").innerText = this.stats.totalTimeSec;
+    
+    const topFriendLink = document.getElementById("profile-top-friend-link");
+    const topFriendAvatar = document.getElementById("profile-top-friend-avatar");
+    if (this.stats.topFriendName) {
+      topFriendLink.innerText = this.stats.topFriendName;
+      topFriendLink.href = this.stats.topFriendLink;
+      topFriendAvatar.src = this.stats.topFriendAvatar;
+    } else {
+      topFriendLink.innerText = "Aún no hay datos";
+      topFriendLink.href = "#";
+      topFriendAvatar.src = "https://ui-avatars.com/api/?name=?&background=random";
+    }
+    document.getElementById("modal-profile").classList.remove("hidden");
+  }
+
+  closeProfile() {
+    document.getElementById("modal-profile").classList.add("hidden");
+    document.getElementById("input-avatar-url").classList.add("hidden");
+  }
+
+  async updateProfilePicture() {
+    const input = document.getElementById("avatar-url-field").value.trim();
+    if (input && window.supabaseClient) {
+      const { data, error } = await window.supabaseClient.auth.updateUser({
+        data: { avatar_url: input }
+      });
+      if (!error) {
+        this.avatarUrl = input;
+        document.getElementById("profile-modal-avatar").src = input;
+        this.showToast("Foto de perfil actualizada.");
+        document.getElementById("input-avatar-url").classList.add("hidden");
+        this.updateCamPlaceholder(); 
+      }
+    }
+  }
+
+  async loadUserStats() {
+    if (!this.session || !window.supabaseClient) return;
+    try {
+      const { data, error } = await window.supabaseClient.rpc('get_my_stats');
+      if (data && !error) {
+        this.stats.totalCalls = data.total_calls || 0;
+        this.stats.totalTimeSec = Math.floor((data.total_time_sec || 0) / 60);
+        this.stats.topFriendName = data.top_friend_name;
+        this.stats.topFriendAvatar = data.top_friend_avatar;
+        this.stats.topFriendLink = `/user/${data.top_friend_username || '#'}`;
+      }
+    } catch(e) { console.warn("Error cargando stats", e); }
   }
 
   async updateStat(statName, increment = 1) {
     if (!this.session || !window.supabaseClient) return;
     const { error } = await window.supabaseClient.rpc('increment_my_stat', { 
-      stat_column: statName, 
-      inc_val: increment 
+      stat_column: statName, inc_val: increment 
     });
     if (error) console.warn("Stats API req failed", error);
   }
+
+  // =================== CHAT Y TOASTS =====================
 
   toggleChat() {
     this.isChatOpen = !this.isChatOpen;
     const sidebar = document.getElementById("chat-sidebar");
     if (this.isChatOpen) {
       sidebar.classList.remove("w-0", "opacity-0");
-      sidebar.classList.add("w-[300px]", "opacity-100");
+      sidebar.classList.add("w-80", "opacity-100");
     } else {
       sidebar.classList.add("w-0", "opacity-0");
-      sidebar.classList.remove("w-[300px]", "opacity-100");
+      sidebar.classList.remove("w-80", "opacity-100");
     }
   }
 
@@ -891,7 +958,6 @@ class SyncWaveApp {
     const text = input.value.trim();
     if (!text) return;
 
-    // Manejo del comando /msg (Mensaje Directo)
     if (text.startsWith("/msg ")) {
       if (!this.session) {
         this.showToast("Solo los usuarios registrados pueden enviar mensajes privados.");
@@ -903,10 +969,7 @@ class SyncWaveApp {
       
       let targetPeerId = null;
       for (const [pId, pData] of this.remotePeers.entries()) {
-        if (pData.username === targetUsername) {
-          targetPeerId = pId;
-          break;
-        }
+        if (pData.username === targetUsername) { targetPeerId = pId; break; }
       }
       if (targetPeerId) {
         window.supabaseP2P.channel.send({
@@ -953,7 +1016,7 @@ class SyncWaveApp {
   }
 
   showChatToast(senderName, message, avatar, isPrivate) {
-    if (this.isChatOpen) return; // Si el chat está abierto, no molestamos con toasts
+    if (this.isChatOpen) return;
     const container = document.getElementById("chat-toast-container");
     const toast = document.createElement("div");
     const avatarSrc = avatar || `https://ui-avatars.com/api/?name=${senderName}&background=random`;
@@ -972,7 +1035,6 @@ class SyncWaveApp {
       toast.classList.remove("opacity-0", "translate-y-4");
       toast.classList.add("opacity-100", "translate-y-0");
     });
-
     setTimeout(() => {
       toast.classList.remove("opacity-100", "translate-y-0");
       toast.classList.add("opacity-0", "translate-y-4");
@@ -983,13 +1045,8 @@ class SyncWaveApp {
   updateConnectionStatus(connected, customText = null) {
     const indicator = document.getElementById("status-indicator");
     const text = document.getElementById("status-text");
-    if (connected) {
-      if (indicator) indicator.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
-      if (text) text.innerText = customText || "P2P de Supabase conectado";
-    } else {
-      if (indicator) indicator.className = "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
-      if (text) text.innerText = customText || "Conectando...";
-    }
+    if (indicator) indicator.className = connected ? "w-2 h-2 rounded-full bg-emerald-400 animate-pulse" : "w-2 h-2 rounded-full bg-amber-400 animate-pulse";
+    if (text) text.innerText = customText || (connected ? "P2P de Supabase conectado" : "Conectando...");
   }
 
   showToast(msg) {
