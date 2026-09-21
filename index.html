@@ -59,9 +59,9 @@
         <button onclick="window.themeManager.setAccent('#8b5cf6', '139, 92, 246')" class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#8b5cf6] ring-2 ring-white/20 hover:scale-110 transition-transform"></button>
         <button onclick="window.themeManager.setAccent('#10b981', '16, 185, 129')" class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#10b981] hover:scale-110 transition-transform"></button>
         <button onclick="window.themeManager.setAccent('#06b6d4', '6, 182, 212')" class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#06b6d4] hover:scale-110 transition-transform"></button>
-        <div class="relative rounded-full flex items-center ml-0.5">
-          <input type="color" id="customColorPicker" value="#8b5cf6" onchange="window.themeManager.setCustomColor(this.value)" class="w-5 h-5 rounded-full overflow-hidden cursor-pointer border-0 p-0 bg-transparent" title="Color Personalizado">
-        </div>
+        <label class="custom-color-picker ml-0.5" title="Color Personalizado">
+          <input type="color" id="customColorPicker" value="#8b5cf6" onchange="window.themeManager.setCustomColor(this.value)">
+        </label>
       </div>
       
       <div id="nav-dividers" class="hidden h-4 w-px bg-white/10 mx-0.5"></div>
