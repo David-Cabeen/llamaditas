@@ -929,23 +929,34 @@ class SyncWaveApp {
   }
 
   openProfile() {
-    document.getElementById("profile-modal-name").innerText = this.userName;
-    document.getElementById("profile-modal-avatar").src = this.avatarUrl || "https://ui-avatars.com/api/?name=?&background=random";
-    document.getElementById("profile-stat-calls").innerText = this.stats.totalCalls;
-    document.getElementById("profile-stat-time").innerText = this.stats.totalTimeSec;
+    const nameEl = document.getElementById("profile-modal-name");
+    const avatarEl = document.getElementById("profile-modal-avatar");
+    const callsEl = document.getElementById("profile-stat-calls");
+    const timeEl = document.getElementById("profile-stat-time");
+
+    if (nameEl) nameEl.innerText = this.userName;
+    if (avatarEl) avatarEl.src = this.avatarUrl || "https://ui-avatars.com/api/?name=?&background=random";
+    if (callsEl) callsEl.innerText = this.stats.totalCalls;
+    if (timeEl) timeEl.innerText = this.stats.totalTimeSec;
     
+    // Check if Top Friend elements exist before modifying them to prevent the null error
     const topFriendLink = document.getElementById("profile-top-friend-link");
     const topFriendAvatar = document.getElementById("profile-top-friend-avatar");
-    if (this.stats.topFriendName) {
-      topFriendLink.innerText = this.stats.topFriendName;
-      topFriendLink.href = this.stats.topFriendLink;
-      topFriendAvatar.src = this.stats.topFriendAvatar;
-    } else {
-      topFriendLink.innerText = "Aún no hay datos";
-      topFriendLink.href = "#";
-      topFriendAvatar.src = "https://ui-avatars.com/api/?name=?&background=random";
+    
+    if (topFriendLink && topFriendAvatar) {
+      if (this.stats.topFriendName) {
+        topFriendLink.innerText = this.stats.topFriendName;
+        topFriendLink.href = this.stats.topFriendLink;
+        topFriendAvatar.src = this.stats.topFriendAvatar;
+      } else {
+        topFriendLink.innerText = "Aún no hay datos";
+        topFriendLink.href = "#";
+        topFriendAvatar.src = "https://ui-avatars.com/api/?name=?&background=random";
+      }
     }
-    document.getElementById("modal-profile").classList.remove("hidden");
+    
+    const modal = document.getElementById("modal-profile");
+    if (modal) modal.classList.remove("hidden");
   }
 
   closeProfile() {
