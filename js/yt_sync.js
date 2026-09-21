@@ -121,12 +121,15 @@ class YouTubeSyncEngine {
 
     if (state === YT.PlayerState.PLAYING) {
       this.isPlaying = true;
+      this.updateTheaterIndicator();
       this.sendMusicAction("play", { position: currentTime });
     } else if (state === YT.PlayerState.PAUSED) {
       this.isPlaying = false;
+      this.updateTheaterIndicator();
       this.sendMusicAction("pause", { position: currentTime });
     } else if (state === YT.PlayerState.ENDED) {
       this.isPlaying = false;
+      this.updateTheaterIndicator();
       this.skipNext();
     }
   }
@@ -141,6 +144,8 @@ class YouTubeSyncEngine {
     const serverPlaying = state.isPlaying;
     const serverPos = state.positionSec || 0;
 
+    this.isPlaying = serverPlaying;
+    this.updateTheaterIndicator();
     this.renderQueueUI();
 
     const currentTrack = this.queue[this.currentIndex];
@@ -413,6 +418,7 @@ class YouTubeSyncEngine {
 
   updatePlayPauseButtonUI(isPlaying) {
     this.isPlaying = isPlaying;
+    this.updateTheaterIndicator();
     document.querySelectorAll(".btn-play-pause").forEach(btn => {
       btn.innerHTML = isPlaying
         ? `<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/></svg>`
@@ -420,7 +426,17 @@ class YouTubeSyncEngine {
     });
   }
 
+  updateTheaterIndicator() {
+    const indicator = document.getElementById("theater-mode-toggle-indicator");
+    if (!indicator) return;
+
+    const isActive = this.queue.length > 0 && this.isPlaying;
+    indicator.classList.toggle("bg-green-500", isActive);
+    indicator.classList.toggle("bg-red-500", !isActive);
+  }
+
   renderQueueUI() {
+    this.updateTheaterIndicator();
     const listEl = document.getElementById("queue-items-container");
     const countEl = document.getElementById("queue-count-badge");
     if (countEl) countEl.innerText = this.queue.length;

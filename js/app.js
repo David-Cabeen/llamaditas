@@ -76,10 +76,14 @@ class LlamaditasApp {
   }
 
   initPwa() {
+    const isMobilePhone = /Android.*Mobile|iPhone|iPod/i.test(navigator.userAgent);
+    if (isMobilePhone) {
+      document.querySelectorAll(".btn-install-pwa").forEach(btn => btn.classList.remove("hidden"));
+    }
+
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       this.deferredPwaPrompt = e;
-      document.querySelectorAll(".btn-install-pwa").forEach(btn => btn.classList.remove("hidden"));
     });
 
     if ("serviceWorker" in navigator) {
@@ -492,7 +496,17 @@ class LlamaditasApp {
       }
     }
 
-    if (remoteContainer) remoteContainer.innerHTML = "";
+    if (remoteContainer) {
+      remoteContainer.innerHTML = "";
+      const cameraCount = peersList.length + 1;
+      const columns = cameraCount <= 2 ? 1 : Math.ceil(Math.sqrt(cameraCount));
+      const mobileColumns = Math.min(columns, 2);
+      remoteContainer.dataset.cameraCount = String(cameraCount);
+      remoteContainer.style.setProperty("--camera-columns", columns);
+      remoteContainer.style.setProperty("--camera-rows", Math.ceil(cameraCount / columns));
+      remoteContainer.style.setProperty("--camera-mobile-columns", mobileColumns);
+      remoteContainer.style.setProperty("--camera-mobile-rows", Math.ceil(cameraCount / mobileColumns));
+    }
     if (screenshareSidebar) screenshareSidebar.innerHTML = "";
 
     if (remoteContainer) {
@@ -507,7 +521,7 @@ class LlamaditasApp {
       
       if (peersList.length === 0) {
           const inviteTile = document.createElement("div");
-          inviteTile.className = "w-full h-full flex flex-col items-center justify-center p-6 sm:p-8 text-center glass rounded-2xl border border-white/10 bg-gradient-to-b from-gray-900/30 to-black/80 min-h-[260px] sm:min-h-[400px]";
+          inviteTile.className = "camera-invite flex flex-col items-center justify-center p-6 sm:p-8 text-center glass rounded-2xl border border-white/10 bg-gradient-to-b from-gray-900/30 to-black/80";
           inviteTile.innerHTML = `
             <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-accent/20 border border-accent/40 flex items-center justify-center text-accent mb-4 glow-accent">
               <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>

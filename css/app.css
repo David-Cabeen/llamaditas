@@ -87,6 +87,29 @@ input[type=range]::-webkit-slider-thumb:hover {
 }
 
 /* Video Containers */
+.camera-grid {
+  --camera-gap: clamp(0.75rem, 1.5vw, 1.5rem);
+  display: grid;
+  grid-template-columns: repeat(var(--camera-columns, 1), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--camera-rows, 1), minmax(0, 1fr));
+  gap: var(--camera-gap);
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+.camera-grid .video-tile {
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+}
+.camera-invite {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  width: min(32rem, calc(100% - 2rem));
+  transform: translateX(-50%);
+  z-index: 20;
+}
 .video-tile {
   background: #090a10;
   position: relative;
@@ -148,7 +171,11 @@ body.theater-fullscreen #cinema-fullscreen-container {
   header { padding-left: 0.75rem; padding-right: 0.75rem; }
   #chat-sidebar { position: fixed; top: 0; bottom: 0; right: 0; z-index: 45; }
   #youtube-slide-drawer { width: 100% !important; max-width: 100vw !important; }
-  .video-tile { min-height: 250px !important; }
+  .camera-grid { --camera-gap: 0.75rem; }
+  .camera-grid {
+    grid-template-columns: repeat(var(--camera-mobile-columns, 1), minmax(0, 1fr));
+    grid-template-rows: repeat(var(--camera-mobile-rows, 1), minmax(0, 1fr));
+  }
   #mic-selector-container { width: 100%; }
   #mic-selector-container button { width: 100%; }
   #mic-dropdown-menu { width: 100%; left: 0; right: 0; }
