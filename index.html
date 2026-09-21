@@ -76,8 +76,8 @@
     </div>
   </header>
 
-  <div id="landing-screen" class="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 max-w-xl mx-auto w-full">
-    <div class="glass p-6 sm:p-8 rounded-3xl border border-white/10 w-full shadow-2xl space-y-5 sm:space-y-6 text-center glow-subtle">
+  <div id="landing-screen" class="landing-screen flex-1 flex flex-col items-center justify-center p-4 sm:p-6 max-w-xl mx-auto w-full">
+    <div class="relative z-10 glass p-6 sm:p-8 rounded-3xl border border-white/10 w-full shadow-2xl space-y-5 sm:space-y-6 text-center glow-subtle">
       <div class="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-accent/20 border border-accent/40 flex items-center justify-center text-accent glow-accent">
         <svg class="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
       </div>
@@ -118,7 +118,7 @@
     </div>
   </div>
 
-  <div id="call-screen" class="hidden flex-1 flex flex-col relative">
+  <div id="call-screen" class="hidden flex-1 min-h-0 flex flex-col relative">
     <div class="px-3 sm:px-6 py-2 bg-black/40 border-b border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-300">
       <div class="flex items-center gap-2">
         <span id="status-indicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -135,8 +135,8 @@
       </div>
     </div>
 
-    <div class="flex-1 flex flex-row overflow-hidden relative w-full h-full">
-      <aside id="chat-sidebar" class="h-full w-0 opacity-0 glass border-r border-white/10 shadow-2xl flex flex-col transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 z-40">
+    <div id="call-workspace" class="flex-1 min-h-0 flex flex-row items-stretch overflow-hidden relative w-full">
+      <aside id="chat-sidebar" class="h-full min-h-0 self-stretch w-0 opacity-0 glass border-r border-white/10 shadow-2xl flex flex-col transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 z-40">
         <div class="flex items-center justify-between border-b border-white/10 p-3 sm:p-4">
           <h3 class="font-bold text-white text-sm tracking-tight flex items-center gap-2"><span>💬 Chat de la Sala</span></h3>
           <button onclick="window.llamaditasApp.toggleChat()" class="text-gray-400 hover:text-white p-1 rounded-lg transition">✕</button>

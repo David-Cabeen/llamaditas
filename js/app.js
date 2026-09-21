@@ -105,7 +105,7 @@ class LlamaditasApp {
 
   generateRoomCode() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let code = "SYNC-";
+    let code = "PAU-";
     window.sfx.play("randomRoom");
     for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
     document.getElementById("input-room-code").value = code;
@@ -200,13 +200,17 @@ class LlamaditasApp {
     } else {
       container.style.backgroundColor = "#000000";
       container.innerHTML = `
-        <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 mb-3 glow-subtle">
-          <svg class="w-8 h-8 sm:w-10 sm:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-        </div>
+        ${this.getGuestAvatarMarkup("w-16 h-16 sm:w-20 sm:h-20", "w-8 h-8 sm:w-10 sm:h-10", "mb-3")}
         <p class="text-xs sm:text-sm font-semibold text-white">Cámara desactivada</p>
         <p class="text-[10px] sm:text-xs text-gray-500 mt-1">Usuario Invitado</p>
       `;
     }
+  }
+
+  getGuestAvatarMarkup(sizeClass = "w-7 h-7", iconClass = "w-4 h-4", extraClass = "") {
+    return `<div class="${sizeClass} rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 flex-shrink-0 ${extraClass}">
+      <svg class="${iconClass}" fill="currentColor" viewBox="0 0 24 24" aria-label="Usuario sin foto"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+    </div>`;
   }
 
   extractProminentColor(imgSrc, containerId) {
@@ -519,7 +523,7 @@ class LlamaditasApp {
     if (remoteContainer) {
       remoteContainer.innerHTML = "";
       const cameraCount = peersList.length + 1;
-      const columns = cameraCount <= 2 ? 1 : Math.ceil(Math.sqrt(cameraCount));
+      const columns = cameraCount === 1 ? 1 : Math.ceil(Math.sqrt(cameraCount));
       const mobileColumns = Math.min(columns, 2);
       remoteContainer.dataset.cameraCount = String(cameraCount);
       remoteContainer.style.setProperty("--camera-columns", columns);
@@ -1144,7 +1148,7 @@ class LlamaditasApp {
     } else {
         menu.innerHTML = users.map(u => `
             <button onclick="window.llamaditasApp.selectUser('${u.username}')" class="w-full text-left px-3 py-2.5 hover:bg-white/10 transition flex items-center gap-2.5 border-b border-white/5 last:border-0">
-                <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name='+u.name}" class="w-6 h-6 rounded-full object-cover shadow-sm">
+          ${u.avatar_url ? `<img src="${u.avatar_url}" class="w-6 h-6 rounded-full object-cover shadow-sm">` : this.getGuestAvatarMarkup("w-6 h-6", "w-3.5 h-3.5")}
                 <div class="flex flex-col">
                     <span class="text-xs font-bold text-white">${u.name}</span>
                     <span class="text-[10px] text-gray-400">@${u.username}</span>
@@ -1220,14 +1224,17 @@ class LlamaditasApp {
   }
 
   renderChatMessage(senderName, message, avatar, isMine, isPrivate) {
+    window.sfx.play('toast')
     const container = document.getElementById("chat-messages-container");
     const div = document.createElement("div");
-    const avatarSrc = avatar || `https://ui-avatars.com/api/?name=${senderName}&background=random`;
+    const avatarMarkup = avatar
+      ? `<img src="${avatar}" class="w-7 h-7 rounded-full flex-shrink-0 mt-1 object-cover">`
+      : this.getGuestAvatarMarkup("w-7 h-7", "w-4 h-4", "mt-1");
     const privacyBadge = isPrivate ? `<span class="text-[9px] text-accent uppercase font-bold ml-1">Privado</span>` : '';
     
     div.className = `flex gap-2 ${isMine ? "flex-row-reverse" : ""}`;
     div.innerHTML = `
-      <img src="${avatarSrc}" class="w-7 h-7 rounded-full flex-shrink-0 mt-1 object-cover">
+      ${avatarMarkup}
       <div class="flex flex-col ${isMine ? "items-end" : "items-start"} max-w-[80%]">
         <div class="flex items-center gap-1 mb-0.5">
           <span class="text-[10px] text-gray-400 font-medium">${senderName}</span>
@@ -1246,11 +1253,13 @@ class LlamaditasApp {
     if (this.isChatOpen) return;
     const container = document.getElementById("chat-toast-container");
     const toast = document.createElement("div");
-    const avatarSrc = avatar || `https://ui-avatars.com/api/?name=${senderName}&background=random`;
+    const avatarMarkup = avatar
+      ? `<img src="${avatar}" class="w-8 h-8 rounded-full object-cover">`
+      : this.getGuestAvatarMarkup("w-8 h-8", "w-4 h-4");
     
     toast.className = `glass border ${isPrivate ? "border-accent" : "border-white/15"} px-3 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-4 max-w-[280px]`;
     toast.innerHTML = `
-      <img src="${avatarSrc}" class="w-8 h-8 rounded-full object-cover">
+      ${avatarMarkup}
       <div class="min-w-0 flex-1">
         <p class="text-[10px] font-bold text-white uppercase tracking-wide truncate">${senderName} ${isPrivate ? '<span class="text-accent">(Susurro)</span>' : ''}</p>
         <p class="text-xs text-gray-300 truncate">${message}</p>
