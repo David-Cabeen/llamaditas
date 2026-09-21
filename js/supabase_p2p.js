@@ -82,7 +82,10 @@ class SupabaseP2P {
             payload: {
               target: payload.from,
               from: this.peerId,
-              name: this.userName
+              auth_user_id: window.llamaditasApp.session?.user?.id || null,
+              name: this.userName,
+              username: window.llamaditasApp.username,
+              avatar_url: window.llamaditasApp.avatarUrl
             }
           });
           this.sendMusicStateSync(payload.from);
@@ -156,6 +159,7 @@ class SupabaseP2P {
           console.log(`[Supabase] Connected to channel: ${channelName}`);
           
           await this.channel.track({
+            auth_user_id: window.llamaditasApp.session?.user?.id || null,
             name: this.userName,
             username: window.llamaditasApp.username,
             avatar_url: window.llamaditasApp.avatarUrl,
@@ -169,7 +173,10 @@ class SupabaseP2P {
             event: "peer-announce",
             payload: {
               from: this.peerId,
-              name: this.userName
+              auth_user_id: window.llamaditasApp.session?.user?.id || null,
+              name: this.userName,
+              username: window.llamaditasApp.username,
+              avatar_url: window.llamaditasApp.avatarUrl
             }
           });
 

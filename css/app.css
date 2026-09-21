@@ -25,6 +25,46 @@ html, body {
 .border-accent { border-color: var(--accent); }
 .ring-accent { --tw-ring-color: var(--accent); }
 
+/* Motion surfaces */
+@keyframes surface-pop-in {
+  from { opacity: 0; transform: translateY(0.75rem) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes surface-pop-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(0.5rem) scale(0.98); }
+}
+@keyframes profile-pop-in {
+  from { opacity: 0; transform: translateY(1rem) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes profile-pop-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(0.75rem) scale(0.96); }
+}
+
+.animate-surface-pop { animation: surface-pop-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-surface-pop-out { animation: surface-pop-out 160ms ease-in both; }
+#modal-profile > div { animation: profile-pop-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+#modal-profile.is-closing > div { animation: profile-pop-out 180ms ease-in both; }
+
+.layout-switchers { position: relative; }
+.layout-option { transition: color 180ms ease, transform 180ms ease; }
+.layout-option:not(.is-active) { color: #9ca3af; }
+.layout-option.is-active { color: #fff; }
+#layout-active-indicator {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  height: calc(100% - 0.5rem);
+  width: 0;
+  border-radius: 0.5rem;
+  background: var(--accent);
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.4);
+  pointer-events: none;
+  transition: left 260ms cubic-bezier(0.16, 1, 0.3, 1), width 260ms cubic-bezier(0.16, 1, 0.3, 1), background-color 220ms ease;
+}
+
 /* Glow Effects */
 .glow-accent { box-shadow: 0 0 25px -3px rgba(var(--accent-rgb), 0.45); }
 .glow-subtle { box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 0 14px rgba(var(--accent-rgb), 0.18); }
@@ -126,6 +166,13 @@ input[type=range]::-webkit-slider-thumb:hover {
 .view-panel {
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+#chat-sidebar { will-change: width, opacity; }
+#youtube-slide-drawer { will-change: transform; }
+#mic-dropdown-menu { transform-origin: bottom left; }
+#mic-dropdown-menu:not(.hidden), #chat-command-menu:not(.hidden) { animation: surface-pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+#youtube-drawer-backdrop:not(.hidden) { animation: backdrop-fade-in 220ms ease both; }
+@keyframes backdrop-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* Draggable Queue Items */
 .queue-item.dragging {

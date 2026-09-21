@@ -32,16 +32,17 @@
       </div>
     </div>
 
-    <div id="layout-switchers" class="hidden items-center bg-black/40 p-1 rounded-xl border border-white/10 text-xs">
-      <button onclick="window.llamaditasApp.setLayout('studio')" id="btn-layout-studio" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-accent text-white shadow-sm flex items-center gap-1.5">
+    <div id="layout-switchers" class="layout-switchers hidden items-center bg-black/40 p-1 rounded-xl border border-white/10 text-xs">
+      <span id="layout-active-indicator" aria-hidden="true"></span>
+      <button onclick="window.llamaditasApp.setLayout('studio')" id="btn-layout-studio" class="layout-option relative z-10 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-accent text-white shadow-sm flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg>
         <span class="hidden sm:inline">Vista Normal</span>
       </button>
-      <button onclick="window.llamaditasApp.setLayout('cinema')" id="btn-layout-cinema" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
+      <button onclick="window.llamaditasApp.setLayout('cinema')" id="btn-layout-cinema" class="layout-option relative z-10 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/></svg>
         <span class="hidden sm:inline">Modo Teatro</span>
       </button>
-      <button onclick="window.llamaditasApp.setLayout('screenshare')" id="btn-layout-screenshare" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
+      <button onclick="window.llamaditasApp.setLayout('screenshare')" id="btn-layout-screenshare" class="layout-option relative z-10 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         <span class="hidden sm:inline">Presentación</span>
       </button>
@@ -393,6 +394,13 @@
           <p id="profile-stat-time" class="text-xl sm:text-2xl font-bold text-emerald-400 font-mono">0</p>
         </div>
       </div>
+      <div class="bg-white/5 border border-white/10 rounded-2xl p-4 mb-6 flex items-center gap-3">
+        <img id="profile-top-friend-avatar" src="https://ui-avatars.com/api/?name=?&background=random" class="w-11 h-11 rounded-full object-cover border border-white/10">
+        <div class="min-w-0">
+          <p class="text-xs text-gray-400">Con quien más hablas</p>
+          <a id="profile-top-friend-link" href="#" class="text-sm font-semibold text-white truncate block">Aún no hay datos</a>
+        </div>
+      </div>
       <div class="flex items-center gap-3 pt-4 border-t border-white/10">
         <button onclick="window.llamaditasApp.logout()" class="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition">
           Cerrar Sesión
@@ -410,6 +418,7 @@
     <span id="toast-msg">Mensaje de notificación</span>
   </div>
 
+  <script src="./js/sfx.js"></script>
   <script src="./js/theme.js"></script>
   <script src="./js/audio_mixer.js"></script>
   <script src="./js/yt_sync.js"></script>

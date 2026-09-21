@@ -19,6 +19,9 @@ class LlamaditasApp {
     this.username = null;
     this.avatarUrl = null;
     this.callStartTime = 0;
+    this.callPartnerIds = new Set();
+    this.recordedCallPartnerIds = new Set();
+    this.lastPartnerStatAt = 0;
     this.deferredPwaPrompt = null;
     this.stats = { totalCalls: 0, totalTimeSec: 0, topFriendName: '', topFriendAvatar: '', topFriendLink: '#' };
 
@@ -130,6 +133,7 @@ class LlamaditasApp {
 
     document.getElementById("layout-switchers").classList.remove("hidden");
     document.getElementById("layout-switchers").classList.add("flex");
+    this.setLayout(this.currentLayout);
     document.getElementById("btn-nav-chat").classList.remove("hidden");
     document.getElementById("btn-nav-chat").classList.add("flex");
     document.getElementById("btn-nav-deck").classList.remove("hidden");
@@ -139,8 +143,12 @@ class LlamaditasApp {
     document.getElementById("landing-screen").classList.add("hidden");
     document.getElementById("call-screen").classList.remove("hidden");
     document.getElementById("display-room-code").innerText = this.roomId;
+    window.sfx.play("callEnter");
 
     this.callStartTime = Date.now();
+    this.callPartnerIds.clear();
+    this.recordedCallPartnerIds.clear();
+    this.lastPartnerStatAt = this.callStartTime;
     this.updateStat('total_calls');
 
     try {
@@ -158,8 +166,10 @@ class LlamaditasApp {
     setInterval(() => {
       if (this.callStartTime > 0) {
         const elapsedSecs = Math.floor((Date.now() - this.callStartTime) / 1000);
-        if (elapsedSecs > 0 && elapsedSecs % 60 === 0) {
+        if (elapsedSecs > 0 && elapsedSecs % 60 === 0 && this.lastPartnerStatAt < this.callStartTime + elapsedSecs * 1000) {
           this.updateStat('total_time_sec', 60);
+          this.updatePartnerTime(60);
+          this.lastPartnerStatAt = this.callStartTime + elapsedSecs * 1000;
         }
       }
     }, 60000);
@@ -219,15 +229,18 @@ class LlamaditasApp {
   }
 
   toggleMicDropdown(forceState) {
+    const wasOpen = this.isMicDropdownOpen;
     this.isMicDropdownOpen = forceState !== undefined ? forceState : !this.isMicDropdownOpen;
     const menu = document.getElementById("mic-dropdown-menu");
     const arrow = document.getElementById("mic-selector-arrow");
     
     if (this.isMicDropdownOpen) {
       menu.classList.remove("hidden"); menu.classList.add("flex", "animate-dropdown");
+      if (!wasOpen) window.sfx.play("menuOpen");
       if (arrow) { arrow.classList.remove("rotate-180"); arrow.classList.add("rotate-0"); }
     } else {
       menu.classList.add("hidden"); menu.classList.remove("flex", "animate-dropdown");
+      if (wasOpen) window.sfx.play("menuClose");
       if (arrow) { arrow.classList.remove("rotate-0"); arrow.classList.add("rotate-180"); }
     }
   }
@@ -309,9 +322,14 @@ class LlamaditasApp {
   onPeerJoined(peerId, info) {
     if (this.remotePeers.has(peerId)) return;
     const peerName = info.name || "Amigo";
-    this.remotePeers.set(peerId, { name: peerName, username: info.username, avatar_url: info.avatar_url, mic: info.mic !== false, cam: info.cam === true });
+    this.remotePeers.set(peerId, { authUserId: info.auth_user_id, name: peerName, username: info.username, avatar_url: info.avatar_url, mic: info.mic !== false, cam: info.cam === true });
+    if (info.auth_user_id && info.auth_user_id !== this.session?.user?.id) {
+      this.callPartnerIds.add(info.auth_user_id);
+      this.recordCallPartner(info.auth_user_id);
+    }
     window.webrtcManager.getOrCreatePeer(peerId, info);
     this.showToast(`${peerName} se unió a la llamada`);
+    window.sfx.play("userJoin");
     this.renderVideoTiles();
     this.renderMixerChannels();
 
@@ -321,6 +339,7 @@ class LlamaditasApp {
   onPeerLeft(peerId) {
     const p = this.remotePeers.get(peerId);
     if (p) this.showToast(`${p.name || "Amigo"} salió de la sala`);
+    window.sfx.play("userLeave");
     window.webrtcManager.removePeer(peerId);
     this.remotePeers.delete(peerId);
     this.renderVideoTiles();
@@ -703,6 +722,7 @@ class LlamaditasApp {
 
   toggleMusicDrawer() {
     this.isMusicDrawerOpen = !this.isMusicDrawerOpen;
+    window.sfx.play(this.isMusicDrawerOpen ? "drawerOpen" : "drawerClose");
     const drawer = document.getElementById("youtube-slide-drawer");
     const backdrop = document.getElementById("youtube-drawer-backdrop");
 
@@ -801,6 +821,7 @@ class LlamaditasApp {
   }
 
   setLayout(layout) {
+    const layoutChanged = this.currentLayout !== layout;
     this.currentLayout = layout;
     const layouts = ["studio", "cinema", "screenshare"];
     layouts.forEach(l => {
@@ -808,12 +829,14 @@ class LlamaditasApp {
       const btn = document.getElementById(`btn-layout-${l}`);
       if (l === layout) {
         if (el) el.classList.remove("hidden");
-        if (btn) btn.className = "px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-accent text-white shadow-sm flex items-center gap-1.5";
+        if (btn) btn.className = "layout-option is-active relative z-10 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-transparent text-white shadow-sm flex items-center gap-1.5";
       } else {
         if (el) el.classList.add("hidden");
-        if (btn) btn.className = "px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
+        if (btn) btn.className = "layout-option relative z-10 px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
       }
     });
+    this.updateLayoutIndicator(layout);
+    if (layoutChanged) window.sfx.play("layoutSelect");
     requestAnimationFrame(() => this.positionTheaterPortal());
     this.renderVideoTiles();
   }
@@ -842,6 +865,15 @@ class LlamaditasApp {
     }
   }
 
+  updateLayoutIndicator(layout) {
+    const indicator = document.getElementById("layout-active-indicator");
+    const button = document.getElementById(`btn-layout-${layout}`);
+    const switcher = document.getElementById("layout-switchers");
+    if (!indicator || !button || !switcher) return;
+    indicator.style.left = `${button.offsetLeft}px`;
+    indicator.style.width = `${button.offsetWidth}px`;
+  }
+
   toggleCinemaFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
@@ -863,7 +895,12 @@ class LlamaditasApp {
 
   toggleMixerModal() { document.getElementById("modal-mixer").classList.toggle("hidden"); }
   
-  leaveCall() {
+  async leaveCall() {
+    window.sfx.play("callExit");
+    if (this.callStartTime > 0) {
+      const unsavedSeconds = Math.max(0, Math.floor((Date.now() - this.lastPartnerStatAt) / 1000));
+      if (unsavedSeconds > 0) await this.updatePartnerTime(unsavedSeconds);
+    }
     window.webrtcManager.closeAll();
     window.supabaseP2P.leave();
     window.location.href = window.location.pathname;
@@ -874,9 +911,12 @@ class LlamaditasApp {
     const { data } = await window.supabaseClient.auth.getSession();
     if (data && data.session) {
       this.session = data.session;
-      this.username = data.session.user.user_metadata.preferred_username || data.session.user.email.split("@")[0];
-      this.avatarUrl = data.session.user.user_metadata.avatar_url;
-      this.userName = this.username;
+      const user = data.session.user;
+      const metadata = user.user_metadata || {};
+      this.username = metadata.preferred_username || metadata.user_name || metadata.username || user.email?.split("@")[0] || `user_${user.id.slice(0, 8)}`;
+      this.userName = metadata.full_name || metadata.name || this.username;
+      this.avatarUrl = metadata.avatar_url || metadata.picture || null;
+      await this.ensureProfile(user);
       
       const btn = document.getElementById("btn-login");
       if (btn) btn.innerHTML = `<img src="${this.avatarUrl}" class="w-5 h-5 rounded-full object-cover"> <span>Ver Perfil</span>`;
@@ -943,11 +983,19 @@ class LlamaditasApp {
     }
     
     const modal = document.getElementById("modal-profile");
-    if (modal) modal.classList.remove("hidden");
+    if (modal) {
+      modal.classList.remove("hidden", "is-closing");
+      window.sfx.play("profileOpen");
+    }
   }
 
   closeProfile() {
-    document.getElementById("modal-profile").classList.add("hidden");
+    const modal = document.getElementById("modal-profile");
+    if (modal) {
+      modal.classList.add("is-closing");
+      window.sfx.play("profileClose");
+      setTimeout(() => modal.classList.add("hidden"), 180);
+    }
     document.getElementById("input-avatar-url").classList.add("hidden");
   }
 
@@ -976,19 +1024,28 @@ class LlamaditasApp {
     }
   }
 
+  async ensureProfile(user) {
+    if (!user || !window.supabaseClient) return;
+    const { error } = await window.supabaseClient.from('profiles').upsert({
+      id: user.id,
+      username: this.username,
+      avatar_url: this.avatarUrl
+    }, { onConflict: 'id' });
+    if (error) console.warn("Error guardando perfil:", error.message);
+  }
+
   async loadUserStats() {
     if (!this.session || !window.supabaseClient) return;
     try {
-      const { data, error } = await window.supabaseClient
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', this.session.user.id)
-        .single();
+      const { data, error } = await window.supabaseClient.rpc('get_my_stats');
 
-      if (data && !error) {
-        this.stats.totalCalls = data.total_calls || 0;
-        this.stats.totalTimeSec = Math.floor((data.total_time_sec || 0) / 60);
-        this.stats.topFriendName = "";
+      const stats = Array.isArray(data) ? data[0] : data;
+      if (stats && !error) {
+        this.stats.totalCalls = stats.total_calls || 0;
+        this.stats.totalTimeSec = Math.floor((stats.total_time_sec || 0) / 60);
+        this.stats.topFriendName = stats.top_friend_name || "";
+        this.stats.topFriendAvatar = stats.top_friend_avatar || "";
+        this.stats.topFriendLink = stats.top_friend_id ? `#user-${stats.top_friend_id}` : "#";
         
         const callsEl = document.getElementById("profile-stat-calls");
         const timeEl = document.getElementById("profile-stat-time");
@@ -1010,13 +1067,30 @@ class LlamaditasApp {
     if (error) console.warn("Stats API req failed", error);
   }
 
+  async recordCallPartner(partnerId) {
+    if (!this.session || !partnerId || this.recordedCallPartnerIds.has(partnerId)) return;
+    this.recordedCallPartnerIds.add(partnerId);
+    const { error } = await window.supabaseClient.rpc('record_call_partner', { partner_user_id: partnerId, duration_seconds: 0 });
+    if (error) console.warn("Partner call stat failed:", error.message);
+  }
+
+  async updatePartnerTime(seconds) {
+    if (!this.session || this.callPartnerIds.size === 0) return;
+    for (const partnerId of this.callPartnerIds) {
+      const { error } = await window.supabaseClient.rpc('record_call_partner', { partner_user_id: partnerId, duration_seconds: seconds });
+      if (error) console.warn("Partner time stat failed:", error.message);
+    }
+  }
+
   toggleChat() {
     this.isChatOpen = !this.isChatOpen;
+    window.sfx.play(this.isChatOpen ? "drawerOpen" : "drawerClose");
     const sidebar = document.getElementById("chat-sidebar");
     if (this.isChatOpen) {
       sidebar.classList.remove("w-0", "opacity-0", "hidden");
-      sidebar.classList.add("w-full", "sm:w-80", "opacity-100");
+      sidebar.classList.add("w-full", "sm:w-80", "opacity-100", "animate-surface-pop");
     } else {
+      sidebar.classList.remove("animate-surface-pop");
       sidebar.classList.add("w-0", "opacity-0");
       sidebar.classList.remove("w-full", "sm:w-80", "opacity-100");
     }
@@ -1202,6 +1276,7 @@ class LlamaditasApp {
   }
 
   showToast(msg) {
+    window.sfx.play("toast");
     const toast = document.getElementById("toast-notification");
     const toastMsg = document.getElementById("toast-msg");
     if (toast && toastMsg) {
