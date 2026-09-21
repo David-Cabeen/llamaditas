@@ -56,11 +56,11 @@ class WebRTCManager {
     let baseConstraints = {};
     
     if (this.otgMode) {
-      // Force raw audio by disabling both standard and hidden Chromium constraints
+      // Force raw audio using 'exact' strictness to prevent Chromium fallbacks
       baseConstraints = {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
+        echoCancellation: { exact: false },
+        noiseSuppression: { exact: false },
+        autoGainControl: { exact: false },
         googEchoCancellation: false,
         googAutoGainControl: false,
         googNoiseSuppression: false,
