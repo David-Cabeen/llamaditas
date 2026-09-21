@@ -13,7 +13,12 @@ window.sfx = (() => {
     menuClose: { notes: [390], duration: 0.07, volume: 0.02, type: "sine" },
     profileOpen: { notes: [440, 659], duration: 0.12, volume: 0.035, type: "sine" },
     profileClose: { notes: [659, 440], duration: 0.1, volume: 0.025, type: "sine" },
-    layoutSelect: { notes: [740], duration: 0.08, volume: 0.03, type: "sine" }
+    layoutSelect: { notes: [740], duration: 0.08, volume: 0.03, type: "sine" },
+    deckOn: { notes: [261.63, 329.63, 392], duration: 0.12, volume: 0.04, type: "sine" },
+    deckOff: { notes: [392, 329.63, 261.63], duration: 0.12, volume: 0.04, type: "sine" },
+    randomRoom: { notes: [220, 330, 440, 660, 880], duration: 0.06, volume: 0.035, type: "triangle"
+}
+
   };
 
   let context = null;

@@ -21,6 +21,7 @@ class YouTubeSyncEngine {
   togglePower() {
     this.isDeckActive = !this.isDeckActive;
     console.log(`[YT Deck] Power toggled: ${this.isDeckActive ? "ON" : "OFF"}`);
+    window.sfx.play(this.isDeckActive ? "deckOn" : "deckOff");
 
     if (this.isDeckActive) {
       this.loadIframeAPI();

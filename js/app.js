@@ -106,6 +106,7 @@ class LlamaditasApp {
   generateRoomCode() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let code = "SYNC-";
+    window.sfx.play("randomRoom");
     for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
     document.getElementById("input-room-code").value = code;
     localStorage.setItem("llamaditas_room_code", code);
