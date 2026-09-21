@@ -9,7 +9,7 @@ const PRESET_COLORS = [
 
 const DARK_SHADES = [
   { name: '🌑 Obsidiana', bg: '#0a0b10', card: 'rgba(18, 20, 29, 0.85)' },
-  { name: '⬛ Oscuro', bg: '#000000', card: 'rgba(16, 16, 16, 0.92)' },
+  { name: '⚫ Oscuro', bg: '#000000', card: 'rgba(16, 16, 16, 0.92)' },
   { name: '🌌 Medianoche', bg: '#0b0f19', card: 'rgba(15, 23, 42, 0.85)' }
 ];
 

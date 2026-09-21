@@ -701,9 +701,10 @@ class LlamaditasApp {
     if (this.isUsingSupabase) window.supabaseP2P.sendUserState(this.isMicOn, this.isCamOn, false);
   }
 
-  toggleCam() {
+  async toggleCam() {
     this.isCamOn = !this.isCamOn;
-    window.webrtcManager.toggleVideo(this.isCamOn);
+    const cameraEnabled = await window.webrtcManager.toggleVideo(this.isCamOn);
+    if (this.isCamOn && !cameraEnabled) this.isCamOn = false;
     this.updateCamButtonUI(this.isCamOn);
     this.updateCamPlaceholder();
 

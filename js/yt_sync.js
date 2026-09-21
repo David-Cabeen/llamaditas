@@ -265,30 +265,19 @@ class YouTubeSyncEngine {
     if (playlistMatch) {
         const pid = playlistMatch[1];
         try {
-            const res = await fetch(`https://yt.lemnoslife.com/playlistItems?part=snippet&playlistId=${pid}&maxResults=50`);
-            const data = await res.json();
-            if (data && data.items && data.items.length > 0) {
-                const tracks = data.items.map(item => {
-                    const snippet = item.snippet;
-                    return {
-                        id: `vid-${snippet.resourceId.videoId}-${Date.now()}-${Math.random()}`,
-                        title: snippet.title,
-                        videoId: snippet.resourceId.videoId,
-                        author: snippet.videoOwnerChannelTitle || "YouTube",
-                        thumbnail: snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url || `https://img.youtube.com/vi/${snippet.resourceId.videoId}/mqdefault.jpg`,
-                        duration: "Track"
-                    };
-                }).filter(t => t.title !== "Private video" && t.title !== "Deleted video");
+        const tracks = await this.fetchPlaylistTracks(pid);
                 
-                if (tracks.length > 0) {
-                    this.applyLocalAction("add-multiple", { tracks });
-                    if (this.syncSender) this.syncSender("add-multiple", { tracks });
-                    this.ensureActiveOnAdd();
-                    return;
-                }
-            }
+        if (tracks.length > 0) {
+          this.applyLocalAction("add-multiple", { tracks });
+          if (this.syncSender) this.syncSender("add-multiple", { tracks });
+          this.ensureActiveOnAdd();
+          return;
+        }
+        throw new Error("La playlist no contiene videos públicos");
         } catch (e) {
-            console.warn("Error fetching playlist API, falling back to single video...", e);
+        console.warn("Error fetching playlist:", e);
+        if (window.llamaditasApp) window.llamaditasApp.showToast("No se pudo cargar la playlist. Comprueba que sea pública.");
+        return;
         }
     }
 
@@ -318,6 +307,43 @@ class YouTubeSyncEngine {
     this.applyLocalAction("add-track", { track });
     if (this.syncSender) this.syncSender("add-track", { track });
     this.ensureActiveOnAdd();
+  }
+
+  async fetchPlaylistTracks(playlistId) {
+    const endpoints = [
+      `https://yt.lemnoslife.com/noKey/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=50`,
+      `https://yt.lemnoslife.com/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=50`
+    ];
+
+    for (const endpoint of endpoints) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(endpoint, { signal: controller.signal });
+        if (!response.ok) continue;
+        const data = await response.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        const tracks = items.map(item => {
+          const snippet = item.snippet || item;
+          const videoId = snippet.resourceId?.videoId || snippet.videoId || item.videoId;
+          if (!videoId) return null;
+          return {
+            id: `vid-${videoId}-${Date.now()}-${Math.random()}`,
+            title: snippet.title || `YouTube Track (${videoId})`,
+            videoId,
+            author: snippet.videoOwnerChannelTitle || snippet.author || "YouTube",
+            thumbnail: snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+            duration: "Track"
+          };
+        }).filter(track => track && track.title !== "Private video" && track.title !== "Deleted video");
+        if (tracks.length > 0) return tracks;
+      } catch (error) {
+        console.warn("Playlist endpoint failed:", endpoint, error.message);
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    return [];
   }
 
   applyLocalAction(action, payload) {

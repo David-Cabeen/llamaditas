@@ -13,6 +13,7 @@ const RTC_CONFIG = {
 class WebRTCManager {
   constructor() {
     this.localStream = null;
+    this.videoConstraints = { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } };
     this.screenStream = null;
     this.isScreenSharing = false;
     this.peers = new Map();
@@ -81,7 +82,7 @@ class WebRTCManager {
   }
 
   async initLocalMedia(cameraDefaultOn = false) {
-    const mobileVideoConstraints = { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } };
+    const mobileVideoConstraints = this.videoConstraints;
 
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia({ video: mobileVideoConstraints, audio: this.getAudioConstraints() });
@@ -101,7 +102,10 @@ class WebRTCManager {
     }
 
     if (!cameraDefaultOn && this.localStream) {
-      this.localStream.getVideoTracks().forEach(track => { track.enabled = false; });
+      this.localStream.getVideoTracks().forEach(track => {
+        track.stop();
+        this.localStream.removeTrack(track);
+      });
     }
 
     if (this.isMonitoring && window.audioMixer) {
@@ -252,9 +256,40 @@ class WebRTCManager {
     }
   }
 
-  toggleVideo(enabled) {
-    if (this.localStream) {
-      this.localStream.getVideoTracks().forEach(track => { track.enabled = enabled; });
+  async toggleVideo(enabled) {
+    if (!this.localStream) return false;
+
+    if (!enabled) {
+      this.localStream.getVideoTracks().forEach(track => {
+        track.stop();
+        this.localStream.removeTrack(track);
+      });
+      this.peers.forEach(({ pc }) => {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+        if (sender) sender.replaceTrack(null).catch(() => {});
+      });
+      return true;
+    }
+
+    try {
+      const cameraStream = await navigator.mediaDevices.getUserMedia({ video: this.videoConstraints });
+      const videoTrack = cameraStream.getVideoTracks()[0];
+      if (!videoTrack) return false;
+      this.localStream.addTrack(videoTrack);
+
+      this.peers.forEach(({ pc }, peerId) => {
+        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+        if (sender) {
+          sender.replaceTrack(videoTrack).catch(() => {});
+        } else {
+          pc.addTrack(videoTrack, this.localStream);
+          this.createAndSendOffer(peerId);
+        }
+      });
+      return true;
+    } catch (err) {
+      console.warn("[WebRTC] Camera could not be enabled:", err);
+      return false;
     }
   }
 
