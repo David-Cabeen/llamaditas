@@ -1,4 +1,4 @@
-﻿// SyncWave Theme & Customization Controller
+﻿// Llamaditas Theme & Customization Controller
 const PRESET_COLORS = [
   { name: 'Cyber Violet', hex: '#8b5cf6', rgb: '139, 92, 246' },
   { name: 'Electric Emerald', hex: '#10b981', rgb: '16, 185, 129' },
@@ -15,9 +15,9 @@ const DARK_SHADES = [
 
 class ThemeManager {
   constructor() {
-    this.currentAccent = localStorage.getItem('syncwave_accent') || '#8b5cf6';
-    this.currentRgb = localStorage.getItem('syncwave_rgb') || '139, 92, 246';
-    this.currentShadeIdx = parseInt(localStorage.getItem('syncwave_shade_idx') || '0', 10);
+    this.currentAccent = localStorage.getItem('llamaditas_accent') || '#8b5cf6';
+    this.currentRgb = localStorage.getItem('llamaditas_rgb') || '139, 92, 246';
+    this.currentShadeIdx = parseInt(localStorage.getItem('llamaditas_shade_idx') || '0', 10);
     this.applyTheme();
   }
 
@@ -39,8 +39,8 @@ class ThemeManager {
   setAccent(hex, rgb) {
     this.currentAccent = hex;
     this.currentRgb = rgb;
-    localStorage.setItem('syncwave_accent', hex);
-    localStorage.setItem('syncwave_rgb', rgb);
+    localStorage.setItem('llamaditas_accent', hex);
+    localStorage.setItem('llamaditas_rgb', rgb);
     this.applyTheme();
   }
 
@@ -54,7 +54,7 @@ class ThemeManager {
 
   cycleDarkShade() {
     this.currentShadeIdx = (this.currentShadeIdx + 1) % DARK_SHADES.length;
-    localStorage.setItem('syncwave_shade_idx', this.currentShadeIdx.toString());
+    localStorage.setItem('llamaditas_shade_idx', this.currentShadeIdx.toString());
     this.applyTheme();
   }
 }

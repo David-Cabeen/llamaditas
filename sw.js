@@ -1,4 +1,4 @@
-const CACHE_NAME = "llamaditas-pwa-v1";
+const CACHE_NAME = "llamaditas-pwa-v2";
 const ASSETS = [
   "./",
   "./index.html",

@@ -1,9 +1,9 @@
-﻿// SyncWave Application Coordinator (Supabase Serverless P2P, Mobile PWA & Clean UI)
-class SyncWaveApp {
+﻿// Llamaditas Application Coordinator (Supabase Serverless P2P, Mobile PWA & Clean UI)
+class LlamaditasApp {
   constructor() {
     this.roomId = null;
     this.userId = "usr_" + Math.random().toString(36).substring(2, 9);
-    this.userName = localStorage.getItem("syncwave_username") || "User_" + this.userId.substring(4, 8);
+    this.userName = localStorage.getItem("llamaditas_username") || "User_" + this.userId.substring(4, 8);
     this.isMicOn = true;
     this.isCamOn = false; 
     this.currentLayout = "studio"; 
@@ -28,10 +28,11 @@ class SyncWaveApp {
   init() {
     this.initAuth();
     this.initPwa();
+    this.initChatCommands();
 
     const params = new URLSearchParams(window.location.search);
     const roomFromUrl = params.get("room");
-    const savedRoomCode = localStorage.getItem("syncwave_room_code") || "";
+    const savedRoomCode = localStorage.getItem("llamaditas_room_code") || "";
 
     if (roomFromUrl) {
       document.getElementById("input-room-code").value = roomFromUrl.toUpperCase();
@@ -45,9 +46,7 @@ class SyncWaveApp {
 
     window.audioMixer.onSpeakerChange = (peerId, isSpeaking) => {
       this.updatePeerSpeakingState(peerId, isSpeaking);
-      if (this.isUsingSupabase) {
-        window.supabaseP2P.sendUserState(this.isMicOn, this.isCamOn, isSpeaking);
-      }
+      if (this.isUsingSupabase) window.supabaseP2P.sendUserState(this.isMicOn, this.isCamOn, isSpeaking);
     };
 
     window.audioMixer.onLocalMicActivity = (level) => {
@@ -80,14 +79,11 @@ class SyncWaveApp {
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       this.deferredPwaPrompt = e;
-      const btns = document.querySelectorAll(".btn-install-pwa");
-      btns.forEach(btn => btn.classList.remove("hidden"));
+      document.querySelectorAll(".btn-install-pwa").forEach(btn => btn.classList.remove("hidden"));
     });
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./sw.js").catch(err => {
-        console.warn("[PWA] Service worker registration failed:", err);
-      });
+      navigator.serviceWorker.register("./sw.js").catch(err => console.warn("[PWA] Service worker registration failed:", err));
     }
   }
 
@@ -95,22 +91,17 @@ class SyncWaveApp {
     if (!this.deferredPwaPrompt) return;
     this.deferredPwaPrompt.prompt();
     const { outcome } = await this.deferredPwaPrompt.userChoice;
-    if (outcome === "accepted") {
-      this.showToast("¡Aplicación instalada en tu dispositivo!");
-    }
+    if (outcome === "accepted") this.showToast("¡Aplicación instalada en tu dispositivo!");
     this.deferredPwaPrompt = null;
-    const btns = document.querySelectorAll(".btn-install-pwa");
-    btns.forEach(btn => btn.classList.add("hidden"));
+    document.querySelectorAll(".btn-install-pwa").forEach(btn => btn.classList.add("hidden"));
   }
 
   generateRoomCode() {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     let code = "SYNC-";
-    for (let i = 0; i < 4; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    for (let i = 0; i < 4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
     document.getElementById("input-room-code").value = code;
-    localStorage.setItem("syncwave_room_code", code);
+    localStorage.setItem("llamaditas_room_code", code);
   }
 
   async joinRoom(customCode = null) {
@@ -123,11 +114,11 @@ class SyncWaveApp {
       return;
     }
 
-    localStorage.setItem("syncwave_room_code", this.roomId);
+    localStorage.setItem("llamaditas_room_code", this.roomId);
 
     if (nameInput && nameInput.value.trim()) {
       this.userName = nameInput.value.trim();
-      localStorage.setItem("syncwave_username", this.userName);
+      localStorage.setItem("llamaditas_username", this.userName);
     }
 
     const newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?room=${this.roomId}`;
@@ -171,23 +162,20 @@ class SyncWaveApp {
   }
 
   updateCamPlaceholder() {
-    const placeholder = document.getElementById("local-cam-off-placeholder");
-    const videoFeed = document.querySelector(".local-video-feed");
-    if (placeholder && videoFeed) {
-      if (this.isCamOn) {
-        placeholder.style.opacity = "0";
-        setTimeout(() => placeholder.classList.add("hidden"), 300);
-        videoFeed.classList.remove("opacity-0");
-      } else {
-        placeholder.classList.remove("hidden");
-        placeholder.style.opacity = "1";
-        videoFeed.classList.add("opacity-0");
-        this.renderCamOffPlaceholder(placeholder, this.avatarUrl, 'local-cam');
-      }
+    const placeholders = document.querySelectorAll("[id$='cam-off-local']");
+    const videoFeeds = document.querySelectorAll("[id$='video-stream-local']");
+    
+    if (this.isCamOn) {
+        placeholders.forEach(p => { p.style.opacity = "0"; setTimeout(() => p.classList.add("hidden"), 300); });
+        videoFeeds.forEach(v => v.classList.remove("opacity-0"));
+    } else {
+        placeholders.forEach(p => { p.classList.remove("hidden"); p.style.opacity = "1"; this.renderCamOffPlaceholder(p, this.avatarUrl, `local-cam-${p.id}`); });
+        videoFeeds.forEach(v => v.classList.add("opacity-0"));
     }
   }
 
   renderCamOffPlaceholder(container, avatar, idPrefix) {
+    if (!container) return;
     if (avatar) {
       container.innerHTML = `
         <img src="${avatar}" id="${idPrefix}-img" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-2xl border-2 border-white/20 mb-3" crossorigin="anonymous">
@@ -212,20 +200,16 @@ class SyncWaveApp {
     img.crossOrigin = "Anonymous";
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      canvas.width = img.width; canvas.height = img.height;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
       try {
         const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         let r=0, g=0, b=0, count=0;
-        for(let i=0; i<data.length; i+=32) { 
-          r += data[i]; g += data[i+1]; b += data[i+2]; count++;
-        }
+        for(let i=0; i<data.length; i+=32) { r += data[i]; g += data[i+1]; b += data[i+2]; count++; }
         r = Math.floor(r/count); g = Math.floor(g/count); b = Math.floor(b/count);
         const el = document.getElementById(containerId);
         if (el) el.style.backgroundColor = `rgba(${r},${g},${b}, 0.5)`;
-      } catch(e) { console.warn("CORS blocked color extraction"); }
+      } catch(e) {}
     };
     img.src = imgSrc;
   }
@@ -236,19 +220,11 @@ class SyncWaveApp {
     const arrow = document.getElementById("mic-selector-arrow");
     
     if (this.isMicDropdownOpen) {
-      menu.classList.remove("hidden");
-      menu.classList.add("flex", "animate-dropdown");
-      if (arrow) {
-        arrow.classList.remove("rotate-180");
-        arrow.classList.add("rotate-0");
-      }
+      menu.classList.remove("hidden"); menu.classList.add("flex", "animate-dropdown");
+      if (arrow) { arrow.classList.remove("rotate-180"); arrow.classList.add("rotate-0"); }
     } else {
-      menu.classList.add("hidden");
-      menu.classList.remove("flex", "animate-dropdown");
-      if (arrow) {
-        arrow.classList.remove("rotate-0"); 
-        arrow.classList.add("rotate-180");
-      }
+      menu.classList.add("hidden"); menu.classList.remove("flex", "animate-dropdown");
+      if (arrow) { arrow.classList.remove("rotate-0"); arrow.classList.add("rotate-180"); }
     }
   }
 
@@ -268,34 +244,18 @@ class SyncWaveApp {
       const devices = await navigator.mediaDevices.enumerateDevices();
       this.audioInputs = devices.filter(d => d.kind === 'audioinput');
       this.renderMicOptions();
-    } catch(e) {
-      console.warn("Failed to enumerate devices", e);
-    }
+    } catch(e) { console.warn("Failed to enumerate devices", e); }
   }
 
   renderMicOptions() {
     const list = document.getElementById("mic-options-list");
     if (!list) return;
-    
     list.innerHTML = this.audioInputs.map(mic => {
       const isSelected = mic.deviceId === this.activeMicId || (this.activeMicId === "default" && mic.deviceId === "default");
       const baseClass = "w-full text-left px-3 py-2.5 text-xs transition-all flex items-center justify-between rounded-lg cursor-pointer";
-      
-      const colorClass = isSelected 
-        ? "bg-accent/20 text-white font-medium border border-accent shadow-[0_0_8px_rgba(139,92,246,0.3)]" 
-        : "text-gray-400 hover:bg-white/10 hover:text-gray-100 border border-transparent";
-        
-      const indicator = isSelected 
-        ? `<span class="w-2 h-2 rounded-full bg-accent flex-shrink-0 shadow-[0_0_8px_rgba(139,92,246,0.8)]"></span>` 
-        : '';
-
-      return `
-        <button onclick="window.syncApp.selectMicInput('${mic.deviceId}')" 
-                class="${baseClass} ${colorClass}">
-          <span class="truncate pr-2">${mic.label || 'Micrófono predeterminado'}</span>
-          ${indicator}
-        </button>
-      `;
+      const colorClass = isSelected ? "bg-accent/20 text-white font-medium border border-accent shadow-[0_0_8px_rgba(139,92,246,0.3)]" : "text-gray-400 hover:bg-white/10 hover:text-gray-100 border border-transparent";
+      const indicator = isSelected ? `<span class="w-2 h-2 rounded-full bg-accent flex-shrink-0 shadow-[0_0_8px_rgba(139,92,246,0.8)]"></span>` : '';
+      return `<button onclick="window.llamaditasApp.selectMicInput('${mic.deviceId}')" class="${baseClass} ${colorClass}"><span class="truncate pr-2">${mic.label || 'Micrófono predeterminado'}</span>${indicator}</button>`;
     }).join('');
   }
 
@@ -316,9 +276,7 @@ class SyncWaveApp {
     });
 
     window.supabaseP2P.connect(
-      this.roomId,
-      this.userId,
-      this.userName,
+      this.roomId, this.userId, this.userName,
       (peerId, info) => this.onPeerJoined(peerId, info),
       (peerId) => this.onPeerLeft(peerId),
       (fromPeerId, signalType, payload) => {
@@ -329,9 +287,7 @@ class SyncWaveApp {
             this.remotePeers.set(fromPeerId, p);
             this.renderVideoTiles();
           }
-        } else {
-          window.webrtcManager.handleSignal(fromPeerId, signalType, payload);
-        }
+        } else { window.webrtcManager.handleSignal(fromPeerId, signalType, payload); }
       },
       (action, payload, fromPeerId) => this.handleMusicAction(action, payload, fromPeerId),
       (data) => this.handlePeerStateUpdate(data),
@@ -342,17 +298,8 @@ class SyncWaveApp {
   handleMusicStateSync(payload) {
     const yt = window.ytSync;
     if (!yt || !payload || yt.queue.length > 0) return;
-
-    if (payload.isPlaying && !yt.isDeckActive) {
-      yt.togglePower();
-    }
-
-    yt.handleServerState({
-      queue: payload.queue || [],
-      currentIndex: payload.currentIndex || 0,
-      isPlaying: !!payload.isPlaying,
-      positionSec: payload.positionSec || 0
-    }, payload.from, "sync");
+    if (payload.isPlaying && !yt.isDeckActive) yt.togglePower();
+    yt.handleServerState({ queue: payload.queue || [], currentIndex: payload.currentIndex || 0, isPlaying: !!payload.isPlaying, positionSec: payload.positionSec || 0 }, payload.from, "sync");
   }
 
   onPeerJoined(peerId, info) {
@@ -364,16 +311,12 @@ class SyncWaveApp {
     this.renderVideoTiles();
     this.renderMixerChannels();
 
-    if (this.avatarUrl) {
-      window.supabaseP2P.sendSignal(peerId, "avatar-sync", { avatar_url: this.avatarUrl });
-    }
+    if (this.avatarUrl) window.supabaseP2P.sendSignal(peerId, "avatar-sync", { avatar_url: this.avatarUrl });
   }
 
   onPeerLeft(peerId) {
     const p = this.remotePeers.get(peerId);
-    if (p) {
-      this.showToast(`${p.name || "Amigo"} salió de la sala`);
-    }
+    if (p) this.showToast(`${p.name || "Amigo"} salió de la sala`);
     window.webrtcManager.removePeer(peerId);
     this.remotePeers.delete(peerId);
     this.renderVideoTiles();
@@ -393,15 +336,13 @@ class SyncWaveApp {
       yt.handleServerState({ queue: yt.queue, currentIndex: yt.currentIndex, isPlaying: payload.isPlaying !== undefined ? payload.isPlaying : yt.isPlaying, positionSec: payload.position || 0 }, fromPeerId, action);
     } else if (action === "add-track") {
       if (payload.track) {
-        yt.queue.push(payload.track);
-        yt.renderQueueUI();
+        yt.queue.push(payload.track); yt.renderQueueUI();
         if (yt.queue.length === 1 && yt.isDeckActive) yt.selectTrackLocally(0);
       }
     } else if (action === "add-multiple") {
       if (payload.tracks && payload.tracks.length > 0) {
         const wasEmpty = yt.queue.length === 0;
-        yt.queue.push(...payload.tracks);
-        yt.renderQueueUI();
+        yt.queue.push(...payload.tracks); yt.renderQueueUI();
         if (wasEmpty && yt.isDeckActive) yt.selectTrackLocally(0);
       }
     } else if (action === "select-track") {
@@ -429,13 +370,8 @@ class SyncWaveApp {
   }
 
   attachLocalVideo(stream) {
-    document.querySelectorAll(".local-video-feed").forEach(v => {
-      v.srcObject = stream;
-      v.muted = true;
-      v.play().catch(e => console.warn(e));
-    });
-    document.querySelectorAll(".local-user-name").forEach(el => el.innerText = `${this.userName} (Tú)`);
-    this.updateCamPlaceholder();
+    document.querySelectorAll(".local-video-feed").forEach(v => { v.srcObject = stream; v.muted = true; v.play().catch(e => console.warn(e)); });
+    this.renderVideoTiles(); 
   }
 
   handleRemoteStream(peerId, stream, info, isScreen) {
@@ -474,14 +410,64 @@ class SyncWaveApp {
     }
   }
 
+  generateTileHTML(peerId, p, isLocal, layoutPrefix) {
+      const vol = isLocal ? 100 : window.audioMixer.getPeerVolume(peerId);
+      const nameText = isLocal ? `${this.userName} (Tú)` : (p.name || "Amigo");
+      const usernameDisplay = p.username ? `<span class="text-[9px] text-gray-400 leading-none pb-0.5">@${p.username}</span>` : '';
+      
+      const volControl = isLocal ? `
+          <div class="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[10px] sm:text-xs text-gray-300">
+            <span class="text-[10px] sm:text-[11px] hidden xs:inline">Micrófono:</span>
+            <div class="w-10 sm:w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div class="local-mic-level-bar h-full bg-accent w-0 transition-all duration-75"></div>
+            </div>
+          </div>
+      ` : `
+          <div class="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2 py-1 sm:px-3 sm:py-1.5 rounded-full border border-white/10">
+            <svg class="w-3.5 h-3.5 custom-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+            <input type="range" min="0" max="150" value="${vol}" oninput="window.llamaditasApp.onPeerVolumeSlider('${peerId}', this.value)" class="w-14 sm:w-20 cursor-pointer">
+            <span id="${layoutPrefix}-overlay-vol-${peerId}" class="text-[10px] sm:text-[11px] font-mono text-gray-300 w-6 text-right">${vol}%</span>
+          </div>
+      `;
+
+      return `
+      <video id="${layoutPrefix}-video-stream-${peerId}" autoplay playsinline webkit-playsinline class="absolute inset-0 w-full h-full object-cover -z-10 transition-opacity duration-300 ${isLocal ? 'local-video-feed' : ''} ${p.cam ? 'opacity-100' : 'opacity-0'}" muted></video>
+      <div id="${layoutPrefix}-cam-off-${peerId}" class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-black transition-opacity duration-500 ${p.cam ? 'opacity-0 hidden' : 'opacity-100'}"></div>
+      
+      <div class="flex items-start justify-between z-10 gap-2 w-full">
+        <div class="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[11px] sm:text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <div class="flex flex-col">
+              <span class="font-medium text-white truncate max-w-[100px] sm:max-w-none">${nameText}</span>
+              ${usernameDisplay}
+          </div>
+          ${!isLocal ? `<span class="text-[9px] sm:text-[10px] text-emerald-400 font-mono bg-emerald-400/10 px-1.5 py-0.5 rounded ml-1">P2P HD</span>` : ''}
+        </div>
+        ${volControl}
+      </div>
+
+      <div class="flex items-center justify-between z-10 w-full mt-auto">
+        <div id="${layoutPrefix}-speaking-badge-${peerId}" class="hidden flex items-center gap-1.5 text-xs text-white/90 bg-accent/20 border border-accent/40 px-2.5 py-1 rounded-lg backdrop-blur-md mt-auto">
+          <div class="flex gap-0.5 items-end h-3">
+            <span class="w-0.5 h-3 bg-accent rounded-full animate-bounce"></span>
+            <span class="w-0.5 h-2 bg-accent rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+            <span class="w-0.5 h-3.5 bg-accent rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
+          </div>
+          <span class="text-[10px] sm:text-[11px] font-medium">Hablando</span>
+        </div>
+        <div></div>
+      </div>
+      `;
+  }
+
   renderVideoTiles() {
-    const remotePeersList = Array.from(this.remotePeers.entries());
     const remoteContainer = document.getElementById("remote-video-container");
     const screenshareSidebar = document.getElementById("screenshare-sidebar");
     const screenshareMain = document.getElementById("screenshare-main");
+    const peersList = Array.from(this.remotePeers.entries());
+    const localData = { cam: this.isCamOn, username: this.username, avatar_url: this.avatarUrl, name: "Tú" };
 
-    if (screenshareSidebar && screenshareMain) {
-      screenshareSidebar.innerHTML = "";
+    if (screenshareMain) {
       screenshareMain.innerHTML = `
         <div class="w-full h-full flex flex-col items-center justify-center text-gray-500 text-sm">
            <svg class="w-12 h-12 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -491,119 +477,89 @@ class SyncWaveApp {
       const activeNameEl = document.getElementById("screenshare-active-name");
       if (activeNameEl) activeNameEl.innerText = "Pantalla Compartida";
       
-      const localTile = document.createElement("div");
-      localTile.className = "relative h-28 sm:h-32 rounded-xl overflow-hidden glass border border-white/10 video-tile";
-      localTile.innerHTML = `
-        <video class="local-video-feed absolute inset-0 w-full h-full object-cover -z-10" autoplay playsinline webkit-playsinline muted></video>
-        <div class="absolute bottom-1 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-medium text-white flex items-center gap-1.5">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Tú
-        </div>
-      `;
-      screenshareSidebar.appendChild(localTile);
-      const localVid = localTile.querySelector("video");
-      if (window.webrtcManager.localStream) localVid.srcObject = window.webrtcManager.localStream;
-      
       if (this.localScreenStream) {
-         screenshareMain.innerHTML = `
-           <div class="video-contain">
-             <video autoplay playsinline webkit-playsinline muted></video>
-           </div>
-         `;
+         screenshareMain.innerHTML = `<div class="video-contain"><video autoplay playsinline webkit-playsinline muted></video></div>`;
          screenshareMain.querySelector("video").srcObject = this.localScreenStream;
          if (activeNameEl) activeNameEl.innerText = "Tu Pantalla";
-      }
-    }
-
-    if (remoteContainer) {
-      if (remotePeersList.length === 0) {
-        remoteContainer.innerHTML = `
-          <div class="w-full h-full flex flex-col items-center justify-center p-6 sm:p-8 text-center glass rounded-2xl border border-white/10 bg-gradient-to-b from-gray-900/30 to-black/80 min-h-[300px] sm:min-h-[400px]">
-            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-accent/20 border border-accent/40 flex items-center justify-center text-accent mb-4 glow-accent">
-              <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
-            </div>
-            <h4 class="text-white font-bold text-sm sm:text-base mb-1">Esperando a que un amigo se conecte</h4>
-            <p class="text-xs text-gray-400 max-w-sm mb-4">Envía tu enlace de invitación a un amigo. Cuando lo abra, se verán aquí al instante.</p>
-            <button onclick="window.syncApp.copyInviteLink()" class="px-4 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition flex items-center gap-2 glow-accent">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
-              <span>Copiar enlace de invitación</span>
-            </button>
-          </div>
-        `;
       } else {
-        remoteContainer.innerHTML = "";
-        remotePeersList.forEach(([peerId, p]) => {
-          const tile = document.createElement("div");
-          tile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 sm:p-4 video-tile group min-h-[260px] sm:min-h-[400px]";
-          tile.id = `peer-tile-${peerId}`;
-          const vol = window.audioMixer.getPeerVolume(peerId);
-
-          tile.innerHTML = `
-            <video id="video-stream-${peerId}" autoplay playsinline webkit-playsinline class="absolute inset-0 w-full h-full object-cover -z-10 transition-opacity duration-300 ${p.cam ? 'opacity-100' : 'opacity-0'}"></video>
-            
-            <div id="cam-off-${peerId}" class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-black transition-opacity duration-500 ${p.cam ? 'opacity-0 hidden' : 'opacity-100'}"></div>
-            
-            <div class="flex items-center justify-between z-10 gap-2">
-              <div class="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[11px] sm:text-xs">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                <span class="font-medium text-white truncate max-w-[100px] sm:max-w-none">${p.name || "Amigo"}</span>
-                <span class="text-[9px] sm:text-[10px] text-emerald-400 font-mono bg-emerald-400/10 px-1.5 py-0.5 rounded">P2P HD</span>
-              </div>
-              
-              <div class="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2 py-1 sm:px-3 sm:py-1.5 rounded-full border border-white/10">
-                <svg class="w-3.5 h-3.5 custom-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
-                <input type="range" min="0" max="150" value="${vol}" oninput="window.syncApp.onPeerVolumeSlider('${peerId}', this.value)" class="w-14 sm:w-20 cursor-pointer">
-                <span id="overlay-vol-${peerId}" class="text-[10px] sm:text-[11px] font-mono text-gray-300 w-6 text-right">${vol}%</span>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between z-10">
-              <div id="speaking-badge-${peerId}" class="hidden flex items-center gap-1.5 text-xs text-white/90 bg-accent/20 border border-accent/40 px-2.5 py-1 rounded-lg backdrop-blur-md">
-                <div class="flex gap-0.5 items-end h-3">
-                  <span class="w-0.5 h-3 bg-accent rounded-full animate-bounce"></span>
-                  <span class="w-0.5 h-2 bg-accent rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
-                  <span class="w-0.5 h-3.5 bg-accent rounded-full animate-bounce" style="animation-delay: 0.4s"></span>
-                </div>
-                <span class="text-[10px] sm:text-[11px] font-medium">Hablando</span>
-              </div>
-              <div></div>
-            </div>
-          `;
-          remoteContainer.appendChild(tile);
-
-          this.renderCamOffPlaceholder(document.getElementById(`cam-off-${peerId}`), p.avatar_url, `remote-cam-${peerId}`);
-
-          if (p.stream) {
-            const vid = tile.querySelector(`#video-stream-${peerId}`);
-            vid.srcObject = p.stream;
-            vid.play().catch(e => console.warn(e));
+        peersList.forEach(([peerId, p]) => {
+          if (p.isSharingScreen || p.screenStream) {
+            screenshareMain.innerHTML = `<div class="video-contain"><video autoplay playsinline webkit-playsinline></video></div>`;
+            screenshareMain.querySelector("video").srcObject = p.screenStream;
+            if (activeNameEl) activeNameEl.innerText = `Pantalla de ${p.name || "Amigo"}`;
           }
         });
       }
     }
 
-    remotePeersList.forEach(([peerId, p]) => {
-      if (screenshareSidebar) {
-        const sideTile = document.createElement("div");
-        sideTile.className = "relative h-28 sm:h-32 rounded-xl overflow-hidden glass border border-white/10 video-tile";
-        sideTile.innerHTML = `
-          <video autoplay playsinline webkit-playsinline class="absolute inset-0 w-full h-full object-cover -z-10"></video>
-          <div class="absolute bottom-1 left-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-medium text-white flex items-center gap-1.5">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> ${p.name || "Amigo"}
-          </div>
-        `;
-        screenshareSidebar.appendChild(sideTile);
-        if (p.stream) sideTile.querySelector("video").srcObject = p.stream;
-      }
+    if (remoteContainer) remoteContainer.innerHTML = "";
+    if (screenshareSidebar) screenshareSidebar.innerHTML = "";
 
-      if ((p.isSharingScreen || p.screenStream) && screenshareMain) {
-        screenshareMain.innerHTML = `
-         <div class="video-contain">
-           <video autoplay playsinline webkit-playsinline></video>
-         </div>
-       `;
-       const activeNameEl = document.getElementById("screenshare-active-name");
-       screenshareMain.querySelector("video").srcObject = p.screenStream;
-       if (activeNameEl) activeNameEl.innerText = `Pantalla de ${p.name || "Amigo"}`;
+    if (remoteContainer) {
+      const tile = document.createElement("div");
+      tile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 sm:p-4 video-tile group min-h-[260px] sm:min-h-[400px]";
+      tile.id = `peer-tile-local`;
+      tile.innerHTML = this.generateTileHTML("local", localData, true, "studio");
+      remoteContainer.appendChild(tile);
+      this.renderCamOffPlaceholder(document.getElementById(`studio-cam-off-local`), this.avatarUrl, `studio-cam-local`);
+      const vid = document.getElementById(`studio-video-stream-local`);
+      if (vid && window.webrtcManager.localStream) vid.srcObject = window.webrtcManager.localStream;
+      
+      if (peersList.length === 0) {
+          const inviteTile = document.createElement("div");
+          inviteTile.className = "w-full h-full flex flex-col items-center justify-center p-6 sm:p-8 text-center glass rounded-2xl border border-white/10 bg-gradient-to-b from-gray-900/30 to-black/80 min-h-[260px] sm:min-h-[400px]";
+          inviteTile.innerHTML = `
+            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-accent/20 border border-accent/40 flex items-center justify-center text-accent mb-4 glow-accent">
+              <svg class="w-6 h-6 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            </div>
+            <h4 class="text-white font-bold text-sm sm:text-base mb-1">Esperando a que un amigo se conecte</h4>
+            <p class="text-xs text-gray-400 max-w-sm mb-4">Envía tu enlace de invitación a un amigo. Cuando lo abra, se verán aquí al instante.</p>
+            <button onclick="window.llamaditasApp.copyInviteLink()" class="px-4 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition flex items-center gap-2 glow-accent">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+              <span>Copiar enlace de invitación</span>
+            </button>
+          `;
+          remoteContainer.appendChild(inviteTile);
+      }
+    }
+
+    if (screenshareSidebar) {
+      const sideTile = document.createElement("div");
+      sideTile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[220px]";
+      sideTile.id = `screen-peer-tile-local`;
+      sideTile.innerHTML = this.generateTileHTML("local", localData, true, "screen");
+      screenshareSidebar.appendChild(sideTile);
+      this.renderCamOffPlaceholder(document.getElementById(`screen-cam-off-local`), this.avatarUrl, `screen-cam-local`);
+      const vid = document.getElementById(`screen-video-stream-local`);
+      if (vid && window.webrtcManager.localStream) vid.srcObject = window.webrtcManager.localStream;
+    }
+
+    peersList.forEach(([peerId, p]) => {
+      if (remoteContainer) {
+          const tile = document.createElement("div");
+          tile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 sm:p-4 video-tile group min-h-[260px] sm:min-h-[400px]";
+          tile.id = `peer-tile-${peerId}`;
+          tile.innerHTML = this.generateTileHTML(peerId, p, false, "studio");
+          remoteContainer.appendChild(tile);
+          this.renderCamOffPlaceholder(document.getElementById(`studio-cam-off-${peerId}`), p.avatar_url, `studio-cam-${peerId}`);
+          if (p.stream) {
+              const vid = document.getElementById(`studio-video-stream-${peerId}`);
+              vid.srcObject = p.stream;
+              vid.play().catch(e=>console.warn(e));
+          }
+      }
+      if (screenshareSidebar) {
+          const sideTile = document.createElement("div");
+          sideTile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[220px]";
+          sideTile.id = `screen-peer-tile-${peerId}`;
+          sideTile.innerHTML = this.generateTileHTML(peerId, p, false, "screen");
+          screenshareSidebar.appendChild(sideTile);
+          this.renderCamOffPlaceholder(document.getElementById(`screen-cam-off-${peerId}`), p.avatar_url, `screen-cam-${peerId}`);
+          if (p.stream) {
+              const vid = document.getElementById(`screen-video-stream-${peerId}`);
+              vid.srcObject = p.stream;
+              vid.play().catch(e=>console.warn(e));
+          }
       }
     });
   }
@@ -613,7 +569,6 @@ class SyncWaveApp {
     if (!list) return;
 
     list.innerHTML = "";
-
     const musicVol = window.audioMixer.getMusicVolume();
     const musicChan = document.createElement("div");
     musicChan.className = "p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2";
@@ -625,7 +580,7 @@ class SyncWaveApp {
         </div>
         <span id="mixer-disp-music-vol" class="text-xs font-mono custom-accent">${musicVol}%</span>
       </div>
-      <input type="range" min="0" max="100" value="${musicVol}" oninput="window.syncApp.onMusicVolumeSlider(this.value)" class="w-full">
+      <input type="range" min="0" max="100" value="${musicVol}" oninput="window.llamaditasApp.onMusicVolumeSlider(this.value)" class="w-full">
     `;
     list.appendChild(musicChan);
 
@@ -640,13 +595,13 @@ class SyncWaveApp {
             <span class="text-xs font-semibold text-white">${p.name || "Amigo"}</span>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="window.syncApp.togglePeerMute('${peerId}')" class="text-xs text-gray-400 hover:text-white" title="Silenciar/Activar audio">
+            <button onclick="window.llamaditasApp.togglePeerMute('${peerId}')" class="text-xs text-gray-400 hover:text-white" title="Silenciar/Activar audio">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
             </button>
             <span id="mixer-disp-peer-vol-${peerId}" class="text-xs font-mono custom-accent">${vol}%</span>
           </div>
         </div>
-        <input type="range" min="0" max="150" value="${vol}" oninput="window.syncApp.onPeerVolumeSlider('${peerId}', this.value)" class="w-full">
+        <input type="range" min="0" max="150" value="${vol}" oninput="window.llamaditasApp.onPeerVolumeSlider('${peerId}', this.value)" class="w-full">
       `;
       list.appendChild(chan);
     });
@@ -666,8 +621,10 @@ class SyncWaveApp {
 
   onPeerVolumeSlider(peerId, val) {
     window.audioMixer.setPeerVolume(peerId, val);
-    const overlay = document.getElementById(`overlay-vol-${peerId}`);
-    if (overlay) overlay.innerText = `${val}%`;
+    const overlayS = document.getElementById(`studio-overlay-vol-${peerId}`);
+    const overlaySc = document.getElementById(`screen-overlay-vol-${peerId}`);
+    if (overlayS) overlayS.innerText = `${val}%`;
+    if (overlaySc) overlaySc.innerText = `${val}%`;
     const mixerDisp = document.getElementById(`mixer-disp-peer-vol-${peerId}`);
     if (mixerDisp) mixerDisp.innerText = `${val}%`;
   }
@@ -782,17 +739,26 @@ class SyncWaveApp {
       
       if (cam !== undefined) {
         p.cam = cam;
-        const vidEl = document.getElementById(`video-stream-${from}`);
-        const offEl = document.getElementById(`cam-off-${from}`);
-        if (vidEl && offEl) {
-          if (cam) {
-            vidEl.classList.remove("opacity-0");
-            offEl.style.opacity = "0";
-            setTimeout(() => offEl.classList.add("hidden"), 300);
-          } else {
-            vidEl.classList.add("opacity-0");
-            offEl.classList.remove("hidden");
-            offEl.style.opacity = "1";
+        const vidEls = [
+            document.getElementById(`studio-video-stream-${from}`),
+            document.getElementById(`screen-video-stream-${from}`)
+        ];
+        const offEls = [
+            document.getElementById(`studio-cam-off-${from}`),
+            document.getElementById(`screen-cam-off-${from}`)
+        ];
+        
+        for (let i = 0; i < vidEls.length; i++) {
+          if (vidEls[i] && offEls[i]) {
+            if (cam) {
+              vidEls[i].classList.remove("opacity-0");
+              offEls[i].style.opacity = "0";
+              setTimeout(() => offEls[i].classList.add("hidden"), 300);
+            } else {
+              vidEls[i].classList.add("opacity-0");
+              offEls[i].classList.remove("hidden");
+              offEls[i].style.opacity = "1";
+            }
           }
         }
       }
@@ -800,16 +766,24 @@ class SyncWaveApp {
   }
 
   updatePeerSpeakingState(peerId, isSpeaking) {
-    const tile = document.getElementById(`peer-tile-${peerId}`);
-    const badge = document.getElementById(`speaking-badge-${peerId}`);
-    if (tile) {
-      if (isSpeaking) tile.classList.add("speaking-pulse");
-      else tile.classList.remove("speaking-pulse");
-    }
-    if (badge) {
-      if (isSpeaking) badge.classList.remove("hidden");
-      else badge.classList.add("hidden");
-    }
+    const tileIds = [`peer-tile-${peerId}`, `screen-peer-tile-${peerId}`];
+    const badgeIds = [`studio-speaking-badge-${peerId}`, `screen-speaking-badge-${peerId}`];
+    
+    tileIds.forEach(id => {
+      const tile = document.getElementById(id);
+      if (tile) {
+        if (isSpeaking) tile.classList.add("speaking-pulse");
+        else tile.classList.remove("speaking-pulse");
+      }
+    });
+
+    badgeIds.forEach(id => {
+      const badge = document.getElementById(id);
+      if (badge) {
+        if (isSpeaking) badge.classList.remove("hidden");
+        else badge.classList.add("hidden");
+      }
+    });
   }
 
   setLayout(layout) {
@@ -826,7 +800,7 @@ class SyncWaveApp {
         if (btn) btn.className = "px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5";
       }
     });
-    this.positionTheaterPortal();
+    requestAnimationFrame(() => this.positionTheaterPortal());
     this.renderVideoTiles();
   }
 
@@ -939,7 +913,6 @@ class SyncWaveApp {
     if (callsEl) callsEl.innerText = this.stats.totalCalls;
     if (timeEl) timeEl.innerText = this.stats.totalTimeSec;
     
-    // Check if Top Friend elements exist before modifying them to prevent the null error
     const topFriendLink = document.getElementById("profile-top-friend-link");
     const topFriendAvatar = document.getElementById("profile-top-friend-avatar");
     
@@ -1035,6 +1008,87 @@ class SyncWaveApp {
     }
   }
 
+  initChatCommands() {
+    const input = document.getElementById("input-chat");
+    const menu = document.createElement("div");
+    menu.id = "chat-command-menu";
+    menu.className = "hidden absolute bottom-[100%] left-0 right-0 mb-2 mx-3 bg-[#0f111a] border border-white/10 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.8)] z-50 flex-col max-h-48 overflow-y-auto";
+    
+    input.parentElement.parentElement.appendChild(menu);
+
+    input.addEventListener("input", (e) => {
+        const val = e.target.value;
+        if (val === "/") {
+            this.showCommandMenu([{ cmd: '/msg', desc: 'Mensaje privado a otros usuarios' }]);
+        } else if (val.startsWith("/msg @")) {
+            const search = val.substring(6).split(' ')[0].toLowerCase();
+            const spaceIndex = val.indexOf(' ', 6);
+            if (spaceIndex === -1) {
+                const users = Array.from(this.remotePeers.values())
+                    .filter(p => p.username && p.username.toLowerCase().includes(search));
+                this.showUsersMenu(users);
+            } else {
+                this.hideCommandMenu();
+            }
+        } else {
+            this.hideCommandMenu();
+        }
+    });
+  }
+
+  showCommandMenu(commands) {
+    const menu = document.getElementById("chat-command-menu");
+    menu.innerHTML = commands.map(c => `
+        <button onclick="window.llamaditasApp.selectCommand('${c.cmd}')" class="w-full text-left px-3 py-2.5 hover:bg-white/10 transition flex flex-col border-b border-white/5 last:border-0">
+            <span class="text-xs font-bold text-accent">${c.cmd}</span>
+            <span class="text-[10px] text-gray-400 mt-0.5">${c.desc}</span>
+        </button>
+    `).join('');
+    menu.classList.remove("hidden");
+    menu.classList.add("flex");
+  }
+
+  showUsersMenu(users) {
+    const menu = document.getElementById("chat-command-menu");
+    if (users.length === 0) {
+        menu.innerHTML = `<div class="px-3 py-3 text-[10px] text-gray-500 text-center">No hay usuarios disponibles</div>`;
+    } else {
+        menu.innerHTML = users.map(u => `
+            <button onclick="window.llamaditasApp.selectUser('${u.username}')" class="w-full text-left px-3 py-2.5 hover:bg-white/10 transition flex items-center gap-2.5 border-b border-white/5 last:border-0">
+                <img src="${u.avatar_url || 'https://ui-avatars.com/api/?name='+u.name}" class="w-6 h-6 rounded-full object-cover shadow-sm">
+                <div class="flex flex-col">
+                    <span class="text-xs font-bold text-white">${u.name}</span>
+                    <span class="text-[10px] text-gray-400">@${u.username}</span>
+                </div>
+            </button>
+        `).join('');
+    }
+    menu.classList.remove("hidden");
+    menu.classList.add("flex");
+  }
+
+  hideCommandMenu() {
+    const menu = document.getElementById("chat-command-menu");
+    if (menu) {
+      menu.classList.add("hidden");
+      menu.classList.remove("flex");
+    }
+  }
+
+  selectCommand(cmd) {
+    const input = document.getElementById("input-chat");
+    input.value = cmd + ' @';
+    input.focus();
+    input.dispatchEvent(new Event('input'));
+  }
+
+  selectUser(username) {
+    const input = document.getElementById("input-chat");
+    input.value = `/msg @${username} `;
+    input.focus();
+    this.hideCommandMenu();
+  }
+
   sendChat() {
     const input = document.getElementById("input-chat");
     const text = input.value.trim();
@@ -1046,7 +1100,8 @@ class SyncWaveApp {
         return;
       }
       const parts = text.split(" ");
-      const targetUsername = parts[1];
+      let targetUsername = parts[1];
+      if (targetUsername.startsWith("@")) targetUsername = targetUsername.substring(1);
       const actualMsg = parts.slice(2).join(" ");
       
       let targetPeerId = null;
@@ -1072,6 +1127,7 @@ class SyncWaveApp {
       this.updateStat('messages_sent');
     }
     input.value = "";
+    this.hideCommandMenu();
   }
 
   renderChatMessage(senderName, message, avatar, isMine, isPrivate) {
@@ -1146,4 +1202,4 @@ class SyncWaveApp {
   }
 }
 
-window.syncApp = new SyncWaveApp();
+window.llamaditasApp = new LlamaditasApp();

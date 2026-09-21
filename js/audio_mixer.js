@@ -1,16 +1,17 @@
-﻿// SyncWave Granular Multi-Track Audio Mixer (Web Audio API)
+﻿// Llamaditas Granular Multi-Track Audio Mixer (Web Audio API)
 class AudioMixer {
   constructor() {
     this.audioCtx = null;
     this.peerTracks = new Map();
     this.localAnalyser = null;
     this.localMicSource = null;
-    this.localMonitorGain = null; // Nodo para el loopback
-    this.musicVolume = parseInt(localStorage.getItem("syncwave_music_vol") || "70", 10);
+    this.localMonitorGain = null;
+    this.musicVolume = parseInt(localStorage.getItem("llamaditas_music_vol") || "70", 10);
     this.onSpeakerChange = null; 
     this.onLocalMicActivity = null; 
     this.monitorInterval = null;
     this.mixedDestination = null;
+    this.speakingStates = new Map();
   }
 
   ensureContext() {
@@ -65,7 +66,7 @@ class AudioMixer {
       const analyser = this.audioCtx.createAnalyser();
       analyser.fftSize = 256;
 
-      const savedVol = parseInt(localStorage.getItem(`syncwave_vol_${peerId}`) || "85", 10);
+      const savedVol = parseInt(localStorage.getItem(`llamaditas_vol_${peerId}`) || "85", 10);
       const linear = savedVol / 100;
       gainNode.gain.value = linear === 0 ? 0 : Math.pow(linear, 2);
 
@@ -88,12 +89,13 @@ class AudioMixer {
         p.analyser.disconnect();
       } catch (e) {}
       this.peerTracks.delete(peerId);
+      this.speakingStates.delete(peerId);
     }
   }
 
   setPeerVolume(peerId, volumePercent) {
     const vol = Math.max(0, Math.min(150, parseInt(volumePercent, 10)));
-    localStorage.setItem(`syncwave_vol_${peerId}`, vol.toString());
+    localStorage.setItem(`llamaditas_vol_${peerId}`, vol.toString());
 
     if (this.peerTracks.has(peerId)) {
       const p = this.peerTracks.get(peerId);
@@ -111,7 +113,7 @@ class AudioMixer {
     if (this.peerTracks.has(peerId)) {
       return this.peerTracks.get(peerId).volume;
     }
-    return parseInt(localStorage.getItem(`syncwave_vol_${peerId}`) || "85", 10);
+    return parseInt(localStorage.getItem(`llamaditas_vol_${peerId}`) || "85", 10);
   }
 
   togglePeerMute(peerId) {
@@ -143,21 +145,18 @@ class AudioMixer {
       this.localAnalyser.fftSize = 256;
       this.localMicSource.connect(this.localAnalyser);
 
-      // Crear el nodo de monitoreo si no existe
       if (!this.localMonitorGain) {
         this.localMonitorGain = this.audioCtx.createGain();
-        this.localMonitorGain.gain.value = 0; // Apagado por defecto
+        this.localMonitorGain.gain.value = 0; 
         this.localMonitorGain.connect(this.audioCtx.destination);
       }
       
-      // Conectar la entrada local al monitor (el volumen se controla en setLocalMonitor)
       this.localMicSource.connect(this.localMonitorGain);
     } catch (e) {
       console.warn("[Mixer] Error attaching local mic:", e);
     }
   }
 
-  // Activa o desactiva el Loopback para escuchar tu propia guitarra/voz
   setLocalMonitor(enable) {
     this.ensureContext();
     if (this.localMonitorGain) {
@@ -165,10 +164,10 @@ class AudioMixer {
     }
   }
 
-    setMusicVolume(volumePercent) {
+  setMusicVolume(volumePercent) {
     const vol = Math.max(0, Math.min(100, parseInt(volumePercent, 10)));
     this.musicVolume = vol;
-    localStorage.setItem("syncwave_music_vol", vol.toString());
+    localStorage.setItem("llamaditas_music_vol", vol.toString());
     
     if (window.ytSync && window.ytSync.player) {
        const linear = vol / 100;
@@ -177,7 +176,6 @@ class AudioMixer {
     }
     return vol;
   }
-  
 
   getMusicVolume() {
     return this.musicVolume;
@@ -187,6 +185,8 @@ class AudioMixer {
     const buffer = new Uint8Array(128);
 
     this.monitorInterval = setInterval(() => {
+      const now = Date.now();
+      
       this.peerTracks.forEach((p, peerId) => {
         if (!p.analyser || p.isMuted) return;
         p.analyser.getByteFrequencyData(buffer);
@@ -195,10 +195,22 @@ class AudioMixer {
           sum += buffer[i];
         }
         const avg = sum / buffer.length;
-        const isSpeaking = avg > 18;
-        if (this.onSpeakerChange) {
-          this.onSpeakerChange(peerId, isSpeaking);
+        const isSpeakingNow = avg > 25; 
+
+        let state = this.speakingStates.get(peerId) || { speaking: false, lastSpoke: 0 };
+        
+        if (isSpeakingNow) {
+            state.lastSpoke = now;
+            if (!state.speaking) {
+                state.speaking = true;
+                if (this.onSpeakerChange) this.onSpeakerChange(peerId, true);
+            }
+        } else if (state.speaking && (now - state.lastSpoke > 800)) { 
+            state.speaking = false;
+            if (this.onSpeakerChange) this.onSpeakerChange(peerId, false);
         }
+        
+        this.speakingStates.set(peerId, state);
       });
 
       if (this.localAnalyser) {

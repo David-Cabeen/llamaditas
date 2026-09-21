@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Llamaditas - Videollamadas P2P y Youtube Sincronizado</title>
   
-  <!-- PWA & Mobile Icons -->
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#8b5cf6">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,7 +18,6 @@
 </head>
 <body class="min-h-screen flex flex-col antialiased select-none text-gray-100 relative overflow-x-hidden">
 
-  <!-- Top Navigation Header -->
   <header class="sticky top-0 z-30 glass border-b border-white/10 px-3 sm:px-6 py-2.5 sm:py-3 flex flex-wrap items-center justify-between gap-2 sm:gap-4">
     <div class="flex items-center gap-2.5">
       <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-accent flex items-center justify-center text-white font-black text-sm sm:text-base shadow-md glow-accent">
@@ -34,36 +32,32 @@
       </div>
     </div>
 
-    <!-- Layout Switchers (Ocultos en Landing) -->
     <div id="layout-switchers" class="hidden items-center bg-black/40 p-1 rounded-xl border border-white/10 text-xs">
-      <button onclick="window.syncApp.setLayout('studio')" id="btn-layout-studio" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-accent text-white shadow-sm flex items-center gap-1.5">
+      <button onclick="window.llamaditasApp.setLayout('studio')" id="btn-layout-studio" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all bg-accent text-white shadow-sm flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg>
         <span class="hidden sm:inline">Vista Normal</span>
       </button>
-      <button onclick="window.syncApp.setLayout('cinema')" id="btn-layout-cinema" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
+      <button onclick="window.llamaditasApp.setLayout('cinema')" id="btn-layout-cinema" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/></svg>
         <span class="hidden sm:inline">Modo Teatro</span>
       </button>
-      <button onclick="window.syncApp.setLayout('screenshare')" id="btn-layout-screenshare" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
+      <button onclick="window.llamaditasApp.setLayout('screenshare')" id="btn-layout-screenshare" class="px-2.5 sm:px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-all flex items-center gap-1.5">
         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         <span class="hidden sm:inline">Presentación</span>
       </button>
     </div>
 
     <div class="flex items-center gap-1.5 sm:gap-3">
-      <!-- PWA Install Button -->
-      <button onclick="window.syncApp.installPwa()" class="btn-install-pwa hidden px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition items-center gap-1.5 shadow-md glow-accent">
+      <button onclick="window.llamaditasApp.installPwa()" class="btn-install-pwa hidden px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition items-center gap-1.5 shadow-md glow-accent">
         📱 <span class="hidden xs:inline">Instalar App</span>
       </button>
-
       <button onclick="window.themeManager.cycleDarkShade()" id="btn-shade" class="px-2 py-1 text-xs text-gray-300 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition hidden sm:inline-block">
         🌑 Obsidiana
       </button>
-
       <div class="hidden sm:flex items-center gap-1 ml-1">
-        <button onclick="window.themeManager.setAccent('#8b5cf6', '139, 92, 246')" class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#8b5cf6] ring-2 ring-white/20 hover:scale-110 transition-transform" title="Cyber Violet"></button>
-        <button onclick="window.themeManager.setAccent('#10b981', '16, 185, 129')" class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#10b981] hover:scale-110 transition-transform" title="Electric Emerald"></button>
-        <button onclick="window.themeManager.setAccent('#06b6d4', '6, 182, 212')" class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#06b6d4] hover:scale-110 transition-transform" title="Neon Cyan"></button>
+        <button onclick="window.themeManager.setAccent('#8b5cf6', '139, 92, 246')" class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#8b5cf6] ring-2 ring-white/20 hover:scale-110 transition-transform"></button>
+        <button onclick="window.themeManager.setAccent('#10b981', '16, 185, 129')" class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#10b981] hover:scale-110 transition-transform"></button>
+        <button onclick="window.themeManager.setAccent('#06b6d4', '6, 182, 212')" class="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-[#06b6d4] hover:scale-110 transition-transform"></button>
         <div class="relative flex items-center ml-0.5">
           <input type="color" id="customColorPicker" value="#8b5cf6" onchange="window.themeManager.setCustomColor(this.value)" class="w-5 h-5 rounded-full overflow-hidden cursor-pointer border-0 p-0 bg-transparent" title="Color Personalizado">
         </div>
@@ -71,20 +65,16 @@
       
       <div id="nav-dividers" class="hidden h-4 w-px bg-white/10 mx-0.5"></div>
       
-      <!-- Chat (Oculto en Landing) -->
-      <button id="btn-nav-chat" onclick="window.syncApp.toggleChat()" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 text-white text-xs font-medium transition items-center gap-1 shadow-sm">
+      <button id="btn-nav-chat" onclick="window.llamaditasApp.toggleChat()" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/15 border border-blue-500/30 hover:bg-blue-500/25 text-white text-xs font-medium transition items-center gap-1 shadow-sm">
         <span>💬</span> <span class="hidden sm:inline">Chat</span>
       </button>
-      
-      <!-- Music Deck (Oculto en Landing) -->
-      <button id="btn-nav-deck" onclick="window.syncApp.toggleMusicDrawer()" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-accent/15 border border-accent/30 hover:bg-accent/25 text-white text-xs font-medium transition items-center gap-1 shadow-sm">
+      <button id="btn-nav-deck" onclick="window.llamaditasApp.toggleMusicDrawer()" class="hidden px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-accent/15 border border-accent/30 hover:bg-accent/25 text-white text-xs font-medium transition items-center gap-1 shadow-sm">
         <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 custom-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
         <span class="hidden sm:inline">Music Deck</span>
       </button>
     </div>
   </header>
 
-  <!-- 1. LANDING SCREEN -->
   <div id="landing-screen" class="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 max-w-xl mx-auto w-full">
     <div class="glass p-6 sm:p-8 rounded-3xl border border-white/10 w-full shadow-2xl space-y-5 sm:space-y-6 text-center glow-subtle">
       <div class="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-accent/20 border border-accent/40 flex items-center justify-center text-accent glow-accent">
@@ -103,24 +93,22 @@
           <label class="block text-xs font-medium text-gray-300 mb-1.5">Código de sala o enlace de invitación</label>
           <div class="flex gap-2">
             <input type="text" id="input-room-code" placeholder="ej PAU-0606" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm font-mono text-white placeholder-gray-500 focus:outline-none focus:border-accent transition uppercase">
-            <button onclick="window.syncApp.generateRoomCode()" class="px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition whitespace-nowrap">
+            <button onclick="window.llamaditasApp.generateRoomCode()" class="px-3 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition whitespace-nowrap">
               🎲 Random
             </button>
           </div>
         </div>
       </div>
       <div class="pt-2 space-y-3">
-        <button onclick="window.syncApp.joinRoom()" class="w-full py-3 rounded-2xl bg-accent text-white font-bold text-sm hover:opacity-90 transition glow-accent flex items-center justify-center gap-2">
+        <button onclick="window.llamaditasApp.joinRoom()" class="w-full py-3 rounded-2xl bg-accent text-white font-bold text-sm hover:opacity-90 transition glow-accent flex items-center justify-center gap-2">
           <span>Entra a la sala</span>
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
         </button>
-
-        <button onclick="window.syncApp.installPwa()" class="btn-install-pwa hidden w-full py-2.5 rounded-xl bg-accent/20 hover:bg-accent/30 border border-accent/40 text-accent font-semibold text-xs transition flex items-center justify-center gap-2">
+        <button onclick="window.llamaditasApp.installPwa()" class="btn-install-pwa hidden w-full py-2.5 rounded-xl bg-accent/20 hover:bg-accent/30 border border-accent/40 text-accent font-semibold text-xs transition flex items-center justify-center gap-2">
           📱 Instalar PWA en tu teléfono
         </button>
-
         <div class="pt-3 border-t border-white/10 mt-3">
-          <button onclick="window.syncApp.handleLoginBtnClick()" id="btn-login" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition flex items-center justify-center gap-2">
+          <button onclick="window.llamaditasApp.handleLoginBtnClick()" id="btn-login" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-gray-300 transition flex items-center justify-center gap-2">
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>
             <span>Iniciar sesión (Opcional)</span>
           </button>
@@ -129,9 +117,7 @@
     </div>
   </div>
 
-  <!-- 2. IN-CALL SCREEN -->
   <div id="call-screen" class="hidden flex-1 flex flex-col relative">
-
     <div class="px-3 sm:px-6 py-2 bg-black/40 border-b border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-300">
       <div class="flex items-center gap-2">
         <span id="status-indicator" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -140,147 +126,89 @@
         <span id="status-text" class="text-gray-400 text-[11px] sm:text-xs hidden sm:inline">Supabase Live P2P Active</span>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="window.syncApp.copyInviteLink()" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-white flex items-center gap-1 transition text-[11px] sm:text-xs">
+        <button onclick="window.llamaditasApp.copyInviteLink()" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-white flex items-center gap-1 transition text-[11px] sm:text-xs">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
           <span>Copiar enlace</span>
         </button>
-        <button onclick="window.syncApp.copyRoomCode()" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition text-[11px] sm:text-xs" title="Copiar código de sala">
-          📋 Código
-        </button>
+        <button onclick="window.llamaditasApp.copyRoomCode()" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition text-[11px] sm:text-xs" title="Copiar código de sala">📋 Código</button>
       </div>
     </div>
 
-    <!-- MAIN APP CONTAINER -->
     <div class="flex-1 flex flex-row overflow-hidden relative w-full">
-
-      <!-- 5. CHAT SIDEBAR (Responsive drawer) -->
       <aside id="chat-sidebar" class="h-full w-0 opacity-0 glass border-r border-white/10 shadow-2xl flex flex-col transition-all duration-300 ease-in-out overflow-hidden flex-shrink-0 z-40">
         <div class="flex items-center justify-between border-b border-white/10 p-3 sm:p-4">
-          <h3 class="font-bold text-white text-sm tracking-tight flex items-center gap-2">
-            <span>💬 Chat de la Sala</span>
-          </h3>
-          <button onclick="window.syncApp.toggleChat()" class="text-gray-400 hover:text-white p-1 rounded-lg transition">✕</button>
+          <h3 class="font-bold text-white text-sm tracking-tight flex items-center gap-2"><span>💬 Chat de la Sala</span></h3>
+          <button onclick="window.llamaditasApp.toggleChat()" class="text-gray-400 hover:text-white p-1 rounded-lg transition">✕</button>
         </div>
-
-        <div id="chat-messages-container" class="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 custom-scrollbar flex flex-col"></div>
-
-        <div class="p-3 sm:p-4 border-t border-white/10 bg-black/30">
+        <div id="chat-messages-container" class="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 custom-scrollbar flex flex-col"></div>
+        <div class="p-3 sm:p-4 border-t border-white/10 bg-black/30 relative flex flex-col">
           <div class="flex gap-2">
-            <input type="text" id="input-chat" onkeypress="if(event.key === 'Enter') window.syncApp.sendChat()" placeholder="Mensaje..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent transition">
-            <button onclick="window.syncApp.sendChat()" class="px-3 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition">
+            <input type="text" id="input-chat" onkeypress="if(event.key === 'Enter') window.llamaditasApp.sendChat()" placeholder="Mensaje... Escribe / para comandos" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent transition">
+            <button onclick="window.llamaditasApp.sendChat()" class="px-3 py-2 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
             </button>
           </div>
         </div>
       </aside>
 
-      <!-- MAIN VIEW CONTAINER -->
       <main class="flex-1 p-3 sm:p-6 relative max-w-[1800px] w-full mx-auto flex flex-col overflow-y-auto">
-
-        <!-- LAYOUT 1: STUDIO VIEW -->
         <div id="layout-studio" class="view-panel flex flex-col gap-3 sm:gap-4 flex-1">
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 flex-1 min-h-[300px]">
-            <div id="remote-video-container" class="contents"></div>
+          <div id="remote-video-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 flex-1 min-h-[300px] content-start"></div>
 
-            <div class="relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 sm:p-4 video-tile group min-h-[260px] sm:min-h-[400px]">
-              <video class="local-video-feed absolute inset-0 w-full h-full object-cover -z-10 opacity-0 transition-opacity duration-300" autoplay playsinline webkit-playsinline muted></video>
-              
-              <div id="local-cam-off-placeholder" class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-black transition-colors duration-500">
-              </div>
-
-              <div class="flex items-center justify-between z-10 gap-2">
-                <div class="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[11px] sm:text-xs">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                  <span class="local-user-name font-medium text-white">Tú</span>
-                </div>
-                <div class="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[10px] sm:text-xs text-gray-300">
-                  <span class="text-[10px] sm:text-[11px] hidden xs:inline">Micrófono:</span>
-                  <div class="w-10 sm:w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div class="local-mic-level-bar h-full bg-accent w-0 transition-all duration-75"></div>
-                  </div>
-                </div>
-              </div>
-              <div class="flex items-center justify-between z-10 text-[10px] sm:text-[11px]">
-                <span class="text-gray-400 bg-black/50 px-2 py-0.5 rounded backdrop-blur-md">Vista Previa</span>
-                <span class="text-emerald-400 font-mono bg-black/50 px-2 py-0.5 rounded backdrop-blur-md">Mic en Vivo</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Floating Bottom Dock Controls -->
           <div class="glass rounded-2xl p-2.5 sm:p-3 border border-white/10 flex flex-wrap items-center justify-between gap-2 glow-subtle">
             <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap flex-1">
-              
-              <!-- Split Mic Button Group -->
               <div class="flex items-stretch rounded-xl bg-white/10 hover:bg-white/15 transition border border-transparent focus-within:border-white/20 flex-1 sm:flex-initial" id="mic-group">
-                <!-- Main Mic Toggle -->
-                <button id="btn-toggle-mic" onclick="window.syncApp.toggleMic()" class="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 text-white text-xs font-medium transition flex-1 sm:flex-initial">
+                <button id="btn-toggle-mic" onclick="window.llamaditasApp.toggleMic()" class="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 text-white text-xs font-medium transition flex-1 sm:flex-initial">
                   <svg class="w-4 h-4 text-emerald-400 icon-mic flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
                   <span class="label-mic hidden xs:inline">Micrófono activo</span>
                 </button>
-                
-                <!-- Divider -->
                 <div class="w-px bg-white/10 my-1.5"></div>
-                
-                <!-- Arrow Selector -->
                 <div class="relative flex items-center" id="mic-selector-container">
-                  <button onclick="window.syncApp.toggleMicDropdown()" class="px-2 h-full flex items-center justify-center text-gray-300 hover:text-white transition">
+                  <button onclick="window.llamaditasApp.toggleMicDropdown()" class="px-2 h-full flex items-center justify-center text-gray-300 hover:text-white transition">
                     <svg id="mic-selector-arrow" class="w-3.5 h-3.5 transition-transform duration-300 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                   </button>
-                  
-                  <!-- Dropdown Menu -->
                   <div id="mic-dropdown-menu" class="absolute bottom-full left-0 mb-2 w-64 bg-[#0f111a] border border-white/10 rounded-xl shadow-2xl overflow-hidden hidden flex-col z-50 origin-bottom">
-                    <div class="px-3 py-2 border-b border-white/10 bg-black/40">
-                      <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Entrada de Audio</span>
-                    </div>
+                    <div class="px-3 py-2 border-b border-white/10 bg-black/40"><span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Entrada de Audio</span></div>
                     <div id="mic-options-list" class="max-h-40 overflow-y-auto py-2 px-2 custom-scrollbar space-y-1"></div>
-                    
                     <div class="border-t border-white/10 bg-black/40 p-2 space-y-1">
                       <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
                         <span class="text-xs text-gray-300 font-medium">🎸 Modo OTG</span>
-                        <input type="checkbox" id="toggle-otg-mode" onchange="window.syncApp.toggleOtgMode(this.checked)" class="accent-accent w-3.5 h-3.5">
+                        <input type="checkbox" id="toggle-otg-mode" onchange="window.llamaditasApp.toggleOtgMode(this.checked)" class="accent-accent w-3.5 h-3.5">
                       </label>
                       <label class="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded cursor-pointer transition">
                         <span class="text-xs text-gray-300 font-medium">🎧 Retorno</span>
-                        <input type="checkbox" id="toggle-loopback" onchange="window.syncApp.toggleLocalMonitor(this.checked)" class="accent-accent w-3.5 h-3.5">
+                        <input type="checkbox" id="toggle-loopback" onchange="window.llamaditasApp.toggleLocalMonitor(this.checked)" class="accent-accent w-3.5 h-3.5">
                       </label>
                     </div>
                   </div>
                 </div>
               </div>
-
-              <!-- Cam Toggle -->
-              <button id="btn-toggle-cam" onclick="window.syncApp.toggleCam()" class="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition flex-1 sm:flex-initial">
+              <button id="btn-toggle-cam" onclick="window.llamaditasApp.toggleCam()" class="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-medium transition flex-1 sm:flex-initial">
                 <svg class="w-4 h-4 icon-cam flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                 <span class="label-cam hidden xs:inline">Cámara apagada</span>
               </button>
-
-              <!-- Screen Share -->
-              <button id="btn-screenshare" onclick="window.syncApp.toggleScreenShare()" class="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition flex-1 sm:flex-initial" title="Compartir pantalla">
+              <button id="btn-screenshare" onclick="window.llamaditasApp.toggleScreenShare()" class="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition flex-1 sm:flex-initial" title="Compartir pantalla">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
                 <span class="hidden md:inline">Compartir pantalla</span>
               </button>
             </div>
-
             <div class="flex items-center gap-2">
-              <button onclick="window.syncApp.toggleMixerModal()" class="px-2.5 sm:px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition flex items-center gap-1.5">
+              <button onclick="window.llamaditasApp.toggleMixerModal()" class="px-2.5 sm:px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-medium transition flex items-center gap-1.5">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
                 <span class="hidden sm:inline">Mezclador</span>
               </button>
-              
-              <button onclick="window.syncApp.leaveCall()" class="px-3 sm:px-3.5 py-2 rounded-xl bg-red-600/80 hover:bg-red-600 text-white text-xs font-medium transition flex items-center gap-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
+              <button onclick="window.llamaditasApp.leaveCall()" class="px-3 sm:px-3.5 py-2 rounded-xl bg-red-600/80 hover:bg-red-600 text-white text-xs font-medium transition flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l-2-2m2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
                 <span>Salir</span>
               </button>
             </div>
           </div>
+        </div>
 
-        <!-- LAYOUT 3: SCREENSHARE VIEW -->
         <div id="layout-screenshare" class="view-panel hidden flex-1 flex flex-col sm:flex-row gap-3 sm:gap-4 h-full min-h-[350px]">
-          <div class="w-full sm:w-56 flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-y-auto custom-scrollbar bg-black/40 p-2 sm:p-3 rounded-2xl border border-white/10">
+          <div class="w-full sm:w-64 lg:w-80 flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-y-auto custom-scrollbar bg-black/40 p-2 sm:p-3 rounded-2xl border border-white/10">
             <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1 hidden sm:block">Miembros</div>
-            <div id="screenshare-sidebar" class="flex sm:flex-col gap-2 sm:gap-3 flex-1"></div>
+            <div id="screenshare-sidebar" class="flex sm:flex-col gap-2 sm:gap-3 flex-1 w-full"></div>
           </div>
           
           <div class="flex-1 rounded-2xl overflow-hidden glass border border-white/10 bg-black relative flex flex-col min-h-[250px]">
@@ -288,7 +216,6 @@
               <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
               <span id="screenshare-active-name" class="text-xs font-bold text-white">Pantalla Compartida</span>
             </div>
-            
             <div id="screenshare-main" class="flex-1 w-full h-full p-2">
               <div class="w-full h-full flex flex-col items-center justify-center text-gray-500 text-xs sm:text-sm">
                 <svg class="w-10 h-10 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
@@ -302,10 +229,8 @@
           <div id="yt-player-target" class="w-full h-full"></div>
         </div>
 
-        <!-- LAYOUT 2: CINEMA THEATER -->
         <div id="layout-cinema" class="view-panel hidden flex-1 flex flex-col gap-4">
           <div id="cinema-fullscreen-container" class="relative w-full flex-1 rounded-2xl overflow-hidden glass border border-white/10 flex flex-col p-4 sm:p-6 bg-black min-h-[350px]">
-            
             <div class="flex flex-wrap items-center justify-between gap-2 z-10 mb-3">
               <div class="glass px-3 py-1.5 rounded-xl flex items-center gap-2.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
@@ -314,34 +239,27 @@
                   <p class="text-[10px] text-gray-400">Video sincronizado de YouTube</p>
                 </div>
               </div>
-              
               <div class="flex items-center gap-2">
-                <button onclick="window.syncApp.toggleCinemaFullscreen()" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs transition flex items-center gap-1">
+                <button onclick="window.llamaditasApp.toggleCinemaFullscreen()" class="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs transition flex items-center gap-1">
                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
                   <span>Pantalla Completa</span>
                 </button>
-                <button onclick="window.syncApp.toggleMusicDrawer()" class="px-2.5 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold">
+                <button onclick="window.llamaditasApp.toggleMusicDrawer()" class="px-2.5 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold">
                   Abrir cola
                 </button>
               </div>
             </div>
-
             <div class="relative flex-1 w-full rounded-xl overflow-hidden bg-black border border-white/10 shadow-2xl">
               <div id="cinema-video-container" class="absolute inset-0 w-full h-full"></div>
             </div>
-
           </div>
         </div>
-
       </main>
     </div>
   </div>
 
-  <!-- 3. SLIDE-IN RIGHT DRAWER FOR YOUTUBE DJ DOCK -->
-  <div id="youtube-drawer-backdrop" onclick="window.syncApp.toggleMusicDrawer()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity"></div>
-
+  <div id="youtube-drawer-backdrop" onclick="window.llamaditasApp.toggleMusicDrawer()" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 hidden transition-opacity"></div>
   <aside id="youtube-slide-drawer" class="fixed top-0 right-0 h-full w-[440px] max-w-[100vw] z-50 glass border-l border-white/10 shadow-2xl p-4 sm:p-6 flex flex-col gap-4 transform translate-x-full transition-transform duration-300 ease-in-out">
-    
     <div class="flex items-center justify-between border-b border-white/10 pb-3">
       <div class="flex items-center gap-2">
         <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
@@ -351,10 +269,9 @@
         <button id="btn-deck-power" onclick="window.ytSync.togglePower()" class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-gray-400 text-xs font-semibold transition flex items-center gap-1">
           <span>○ Deck apagado</span>
         </button>
-        <button onclick="window.syncApp.toggleMusicDrawer()" class="p-1 text-gray-400 hover:text-white rounded-lg transition" title="Cerrar panel">✕</button>
+        <button onclick="window.llamaditasApp.toggleMusicDrawer()" class="p-1 text-gray-400 hover:text-white rounded-lg transition" title="Cerrar panel">✕</button>
       </div>
     </div>
-
     <div id="deck-sleeping-card" class="p-6 rounded-2xl bg-white/5 border border-white/5 text-center space-y-3">
       <div class="w-12 h-12 mx-auto rounded-full bg-white/5 flex items-center justify-center text-gray-400">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
@@ -367,9 +284,7 @@
         Encender cabina
       </button>
     </div>
-
     <div id="deck-active-card" class="hidden flex flex-col gap-4 flex-1 overflow-y-auto pr-1">
-      
       <div class="relative rounded-xl overflow-hidden bg-black border border-white/10 aspect-square w-full max-w-[180px] sm:max-w-[220px] mx-auto glow-subtle">
         <img class="now-playing-art w-full h-full object-cover" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80" alt="Carátula actual">
         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-transparent"></div>
@@ -378,13 +293,11 @@
           Audio activo
         </div>
       </div>
-
       <div class="space-y-1 text-center">
         <span class="text-[10px] uppercase font-bold text-accent tracking-wider">Reproduciendo ahora</span>
         <h4 class="now-playing-title font-semibold text-white text-sm line-clamp-1">La cola está vacía</h4>
         <p class="now-playing-author text-xs text-gray-400">Pega un enlace de YouTube abajo para empezar</p>
       </div>
-
       <div class="space-y-1">
         <div class="w-full bg-white/10 h-1.5 rounded-full overflow-hidden cursor-pointer" onclick="window.ytSync.seekFromProgressBar(event, this)">
           <div class="playback-bar-fill bg-accent h-full w-0 rounded-full pointer-events-none transition-all"></div>
@@ -394,7 +307,6 @@
           <span class="playback-total-time">0:00</span>
         </div>
       </div>
-
       <div class="flex items-center justify-between px-4">
         <button onclick="window.ytSync.skipPrev()" class="p-2 text-gray-400 hover:text-white transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"/></svg>
@@ -406,22 +318,19 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"/></svg>
         </button>
       </div>
-
       <div class="bg-black/30 rounded-xl p-3 border border-white/5 flex items-center justify-between gap-3">
         <span class="text-xs text-gray-300 font-medium">Volumen música:</span>
         <div class="flex items-center gap-2 flex-1 max-w-[160px]">
-          <input type="range" id="deck-music-vol-slider" min="0" max="100" value="70" oninput="window.syncApp.onMusicVolumeSlider(this.value)" class="w-full">
+          <input type="range" id="deck-music-vol-slider" min="0" max="100" value="70" oninput="window.llamaditasApp.onMusicVolumeSlider(this.value)" class="w-full">
           <span id="deck-music-vol-val" class="text-xs font-mono text-gray-300 w-8 text-right">70%</span>
         </div>
       </div>
-
       <div class="flex gap-2">
-        <input type="text" id="input-yt-url" placeholder="Pega un enlace de YouTube..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent transition">
+        <input type="text" id="input-yt-url" placeholder="Pega enlace de YouTube..." class="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-accent transition">
         <button onclick="window.ytSync.addLink(document.getElementById('input-yt-url').value); document.getElementById('input-yt-url').value = ''" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition flex items-center gap-1">
           <span>Añadir</span>
         </button>
       </div>
-
       <div class="flex flex-col gap-2 flex-1">
         <div class="flex items-center justify-between text-xs text-gray-400">
           <span class="font-semibold uppercase text-[10px] tracking-wider text-gray-300">Siguiente en la cola (<span id="queue-count-badge">0</span>)</span>
@@ -431,7 +340,6 @@
     </div>
   </aside>
 
-  <!-- 4. INDEPENDENT AUDIO MIXER MODAL -->
   <div id="modal-mixer" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
     <div class="glass border border-white/20 rounded-2xl max-w-md w-full p-5 sm:p-6 space-y-5 glow-accent">
       <div class="flex items-center justify-between border-b border-white/10 pb-3">
@@ -444,23 +352,20 @@
             <p class="text-[11px] sm:text-xs text-gray-400">Volumen independiente por canal</p>
           </div>
         </div>
-        <button onclick="window.syncApp.toggleMixerModal()" class="text-gray-400 hover:text-white p-1 rounded-lg">✕</button>
+        <button onclick="window.llamaditasApp.toggleMixerModal()" class="text-gray-400 hover:text-white p-1 rounded-lg">✕</button>
       </div>
-
       <div id="mixer-channels-list" class="space-y-3 max-h-[60vh] overflow-y-auto"></div>
-
       <div class="flex justify-end gap-2">
-        <button onclick="window.syncApp.toggleMixerModal()" class="w-full py-2.5 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition">
+        <button onclick="window.llamaditasApp.toggleMixerModal()" class="w-full py-2.5 rounded-xl bg-accent text-white text-xs font-semibold hover:opacity-90 transition">
           Listo
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 6. USER PROFILE MODAL -->
   <div id="modal-profile" class="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] hidden flex items-center justify-center p-4">
     <div class="glass border border-white/20 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-      <button onclick="window.syncApp.closeProfile()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl bg-white/5 transition">✕</button>
+      <button onclick="window.llamaditasApp.closeProfile()" class="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-xl bg-white/5 transition">✕</button>
       
       <div class="flex flex-col items-center mb-6 relative group">
         <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-accent overflow-hidden mb-3 relative">
@@ -474,7 +379,7 @@
         
         <div id="input-avatar-url" class="hidden w-full mt-4 flex gap-2">
            <input type="text" id="avatar-url-field" placeholder="Enlace a la foto..." class="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-accent transition">
-           <button onclick="window.syncApp.updateProfilePicture()" class="px-3 py-2 rounded-xl bg-accent text-white text-xs font-semibold">Guardar</button>
+           <button onclick="window.llamaditasApp.updateProfilePicture()" class="px-3 py-2 rounded-xl bg-accent text-white text-xs font-semibold">Guardar</button>
         </div>
       </div>
 
@@ -488,12 +393,11 @@
           <p id="profile-stat-time" class="text-xl sm:text-2xl font-bold text-emerald-400 font-mono">0</p>
         </div>
       </div>
-
       <div class="flex items-center gap-3 pt-4 border-t border-white/10">
-        <button onclick="window.syncApp.logout()" class="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition">
+        <button onclick="window.llamaditasApp.logout()" class="flex-1 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-medium transition">
           Cerrar Sesión
         </button>
-        <button onclick="window.syncApp.deleteAccount()" class="px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500 border border-red-500/40 text-red-400 hover:text-white text-xs font-medium transition">
+        <button onclick="window.llamaditasApp.deleteAccount()" class="px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500 border border-red-500/40 text-red-400 hover:text-white text-xs font-medium transition">
           Eliminar Cuenta
         </button>
       </div>
@@ -501,7 +405,6 @@
   </div>
 
   <div id="chat-toast-container" class="fixed bottom-20 right-4 sm:right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
-
   <div id="toast-notification" class="fixed bottom-4 right-4 sm:right-6 z-50 glass border border-white/15 px-4 py-3 rounded-2xl text-xs text-white shadow-2xl flex items-center gap-2.5 transition-all duration-300 opacity-0 translate-y-4 pointer-events-none max-w-[90vw]">
     <span class="w-2 h-2 rounded-full bg-accent flex-shrink-0"></span>
     <span id="toast-msg">Mensaje de notificación</span>

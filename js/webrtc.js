@@ -1,4 +1,4 @@
-﻿// SyncWave WebRTC Peer-to-Peer Mesh Manager (High Stability, Low-Latency & Mobile Optimized)
+﻿// Llamaditas WebRTC Peer-to-Peer Mesh Manager
 const RTC_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -19,14 +19,9 @@ class WebRTCManager {
     this.signalSender = null;
     this.myPeerId = null;
 
-    // Audio Modifiers
     this.otgMode = false;
     this.isMonitoring = false;
-    this.monitorAudioEl = new Audio();
-    this.monitorAudioEl.autoplay = true;
-    this.monitorAudioEl.muted = true;
 
-    // Callbacks
     this.onRemoteTrackAdded = null;
     this.onRemotePeerDisconnected = null;
     this.onConnectionQuality = null;
@@ -36,16 +31,12 @@ class WebRTCManager {
     this.otgMode = enabled;
   }
 
-  // Intercept WebRTC connection data to disable Opus voice compression
   _optimizeSdpForMusic(sdp) {
-    if (!this.otgMode) return sdp; // Leave standard voice settings if OTG is off
-
-    // Find the Opus payload type in the SDP
+    if (!this.otgMode) return sdp; 
     const match = sdp.match(/a=rtpmap:(\d+) opus\/48000\/2/i);
     if (!match) return sdp;
     const opusPayload = match[1];
 
-    // Force high-bitrate stereo and explicitly disable DTX (speech detection gating)
     const fmtpRegex = new RegExp(`a=fmtp:${opusPayload} (.*)`, 'i');
     return sdp.replace(fmtpRegex, (fullMatch, currentParams) => {
       return `a=fmtp:${opusPayload} ${currentParams}; stereo=1; sprop-stereo=1; maxaveragebitrate=510000; cbr=1; usedtx=0`;
@@ -56,7 +47,6 @@ class WebRTCManager {
     let baseConstraints = {};
     
     if (this.otgMode) {
-      // Force raw audio using 'exact' strictness to prevent Chromium fallbacks
       baseConstraints = {
         echoCancellation: { exact: false },
         noiseSuppression: { exact: false },
@@ -85,42 +75,24 @@ class WebRTCManager {
 
   setLocalMonitor(enabled) {
     this.isMonitoring = enabled;
-    if (enabled && this.localStream) {
-      this.monitorAudioEl.srcObject = this.localStream;
-      this.monitorAudioEl.muted = false;
-      this.monitorAudioEl.play().catch(e => console.warn("Monitor play prevented:", e));
-    } else {
-      this.monitorAudioEl.muted = true;
-      this.monitorAudioEl.srcObject = null;
+    if (window.audioMixer) {
+        window.audioMixer.setLocalMonitor(enabled);
     }
   }
 
   async initLocalMedia(cameraDefaultOn = false) {
-    const mobileVideoConstraints = {
-      facingMode: "user",
-      width: { ideal: 1280 },
-      height: { ideal: 720 }
-    };
+    const mobileVideoConstraints = { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } };
 
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        video: mobileVideoConstraints,
-        audio: this.getAudioConstraints()
-      });
+      this.localStream = await navigator.mediaDevices.getUserMedia({ video: mobileVideoConstraints, audio: this.getAudioConstraints() });
     } catch (err) {
       console.warn("[WebRTC] Primary camera constraints rejected. Fallback to default video:", err);
       try {
-        this.localStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: this.getAudioConstraints()
-        });
+        this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: this.getAudioConstraints() });
       } catch (err2) {
         console.warn("[WebRTC] Camera unavailable, falling back to audio only:", err2);
         try {
-          this.localStream = await navigator.mediaDevices.getUserMedia({
-            video: false,
-            audio: this.getAudioConstraints()
-          });
+          this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: this.getAudioConstraints() });
         } catch (err3) {
           console.error("[WebRTC] Media acquisition completely rejected:", err3);
           throw err3;
@@ -132,9 +104,8 @@ class WebRTCManager {
       this.localStream.getVideoTracks().forEach(track => { track.enabled = false; });
     }
 
-    if (this.isMonitoring) {
-      this.monitorAudioEl.srcObject = this.localStream;
-      this.monitorAudioEl.muted = false;
+    if (this.isMonitoring && window.audioMixer) {
+      window.audioMixer.setLocalMonitor(true);
     }
 
     return this.localStream;
@@ -150,26 +121,15 @@ class WebRTCManager {
 
     console.log(`[WebRTC] Initializing RTCPeerConnection for ${peerId}`);
     const pc = new RTCPeerConnection(RTC_CONFIG);
-    const peerData = {
-      pc,
-      candidateQueue: [],
-      remoteStream: new MediaStream(),
-      info: peerInfo
-    };
+    const peerData = { pc, candidateQueue: [], remoteStream: new MediaStream(), info: peerInfo };
 
     if (this.localStream) {
-      this.localStream.getTracks().forEach(track => {
-        pc.addTrack(track, this.localStream);
-      });
+      this.localStream.getTracks().forEach(track => { pc.addTrack(track, this.localStream); });
     }
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
-        this.sendSignal(peerId, "candidate", {
-          candidate: candidate.candidate,
-          sdpMid: candidate.sdpMid,
-          sdpMLineIndex: candidate.sdpMLineIndex
-        });
+        this.sendSignal(peerId, "candidate", { candidate: candidate.candidate, sdpMid: candidate.sdpMid, sdpMLineIndex: candidate.sdpMLineIndex });
       }
     };
 
@@ -185,12 +145,7 @@ class WebRTCManager {
         }
       }
 
-      if (isScreen) {
-        console.log(`[WebRTC] Received SCREEN track from ${peerId}`);
-      } else {
-        console.log(`[WebRTC] Received CAMERA/MIC track from ${peerId}`);
-        peerData.remoteStream.addTrack(event.track);
-      }
+      if (!isScreen) peerData.remoteStream.addTrack(event.track);
 
       if (this.onRemoteTrackAdded) {
         this.onRemoteTrackAdded(peerId, isScreen ? peerData.screenStream : peerData.remoteStream, peerData.info, isScreen);
@@ -212,9 +167,7 @@ class WebRTCManager {
 
   async switchMicrophone(deviceId) {
     try {
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        audio: this.getAudioConstraints(deviceId)
-      });
+      const newStream = await navigator.mediaDevices.getUserMedia({ audio: this.getAudioConstraints(deviceId) });
       const newAudioTrack = newStream.getAudioTracks()[0];
 
       const oldTrack = this.localStream.getAudioTracks()[0];
@@ -225,20 +178,9 @@ class WebRTCManager {
 
       this.replaceAudioTrackOnAllPeers(newAudioTrack);
 
-      if (this.isMonitoring) {
-        this.monitorAudioEl.srcObject = this.localStream;
-        this.monitorAudioEl.play().catch(e => console.warn(e));
-      }
+      if (window.audioMixer) window.audioMixer.attachLocalMic(this.localStream);
 
-      if (window.audioMixer) {
-        window.audioMixer.attachLocalMic(this.localStream);
-      }
-
-      // Force renegotiation with connected peers so the new music-grade SDP parameters take effect
-      this.peers.forEach((peer, peerId) => {
-        this.createAndSendOffer(peerId);
-      });
-
+      this.peers.forEach((peer, peerId) => this.createAndSendOffer(peerId));
     } catch (err) {
       console.error("Failed to switch microphone:", err);
     }
@@ -248,10 +190,7 @@ class WebRTCManager {
     const peer = this.getOrCreatePeer(targetPeerId);
     try {
       const offer = await peer.pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
-      
-      // Inject Music Mode SDP parameters before setting local description
       offer.sdp = this._optimizeSdpForMusic(offer.sdp); 
-      
       await peer.pc.setLocalDescription(offer);
       this.sendSignal(targetPeerId, "offer", { type: offer.type, sdp: offer.sdp });
     } catch (err) {
@@ -274,10 +213,7 @@ class WebRTCManager {
         }
 
         const answer = await pc.createAnswer();
-        
-        // Inject Music Mode SDP parameters before answering
         answer.sdp = this._optimizeSdpForMusic(answer.sdp);
-        
         await pc.setLocalDescription(answer);
         this.sendSignal(fromPeerId, "answer", { type: answer.type, sdp: answer.sdp });
 
@@ -345,7 +281,7 @@ class WebRTCManager {
       return false;
     } else {
       if (!navigator.mediaDevices || typeof navigator.mediaDevices.getDisplayMedia !== "function") {
-        if (window.syncApp) window.syncApp.showToast("El uso compartido de pantalla no es compatible en este dispositivo.");
+        if (window.llamaditasApp) window.llamaditasApp.showToast("El uso compartido de pantalla no es compatible en este dispositivo.");
         return false;
       }
 
@@ -356,7 +292,7 @@ class WebRTCManager {
         this._screenTrackId = screenVideoTrack.id;
 
         screenVideoTrack.onended = () => {
-          if (window.syncApp) window.syncApp.onScreenShareEnded();
+          if (window.llamaditasApp) window.llamaditasApp.onScreenShareEnded();
           this.toggleScreenShare();
         };
 

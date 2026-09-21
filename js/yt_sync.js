@@ -1,9 +1,9 @@
-// SyncWave Synchronized YouTube Player & Queue Manager
+// Llamaditas Synchronized YouTube Player & Queue Manager
 class YouTubeSyncEngine {
   constructor() {
     this.player = null;
     this.isReady = false;
-    this.isDeckActive = false; // Off by default to save resources
+    this.isDeckActive = false; 
     this.queue = []; 
     this.currentIndex = 0;
     this.isPlaying = false;
@@ -68,24 +68,11 @@ class YouTubeSyncEngine {
       height: "100%",
       width: "100%",
       videoId: initialVid,
-      playerVars: {
-        autoplay: 0,
-        controls: 1,
-        disablekb: 0,
-        enablejsapi: 1,
-        fs: 1,
-        modestbranding: 1,
-        rel: 0,
-        playsinline: 1,
-        origin: window.location.origin
-      },
+      playerVars: { autoplay: 0, controls: 1, disablekb: 0, enablejsapi: 1, fs: 1, modestbranding: 1, rel: 0, playsinline: 1, origin: window.location.origin },
       events: {
         onReady: (event) => this.onPlayerReady(event),
         onStateChange: (event) => this.onPlayerStateChange(event),
-        onError: (event) => {
-          console.warn("[YT Player] Error:", event.data);
-          setTimeout(() => this.skipNext(), 2000);
-        }
+        onError: (event) => { console.warn("[YT Player] Error:", event.data); setTimeout(() => this.skipNext(), 2000); }
       }
     });
   }
@@ -96,10 +83,7 @@ class YouTubeSyncEngine {
       this.progressInterval = null;
     }
     if (this.player && typeof this.player.destroy === "function") {
-      try {
-        this.player.pauseVideo();
-        this.player.destroy();
-      } catch (e) {}
+      try { this.player.pauseVideo(); this.player.destroy(); } catch (e) {}
       this.player = null;
     }
     this.isReady = false;
@@ -109,18 +93,14 @@ class YouTubeSyncEngine {
 
   onPlayerReady(event) {
     this.isReady = true;
-    console.log("[YT Player] Engine ready");
     const initVol = window.audioMixer ? window.audioMixer.getMusicVolume() : 70;
     this.setVolume(initVol);
 
     if (this.pendingVideoId) {
       this.player.loadVideoById(this.pendingVideoId, this.pendingStartTime);
-      if (!this.isPlaying) {
-        this.player.pauseVideo();
-      }
+      if (!this.isPlaying) this.player.pauseVideo();
       this.pendingVideoId = null;
     }
-
     this.startProgressTracking();
   }
 
@@ -129,17 +109,13 @@ class YouTubeSyncEngine {
       const linear = vol / 100;
       const logVol = linear === 0 ? 0 : Math.round(Math.pow(linear, 2) * 100);
       this.player.setVolume(logVol);
-      if (vol === 0) {
-        this.player.mute();
-      } else {
-        this.player.unMute();
-      }
+      if (vol === 0) this.player.mute();
+      else this.player.unMute();
     }
   }
 
   onPlayerStateChange(event) {
     if (this.isSyncing) return;
-
     const state = event.data;
     const currentTime = this.player.getCurrentTime() || 0;
 
@@ -156,9 +132,7 @@ class YouTubeSyncEngine {
   }
 
   sendMusicAction(action, payload) {
-    if (this.syncSender) {
-      this.syncSender(action, payload);
-    }
+    if (this.syncSender) this.syncSender(action, payload);
   }
 
   handleServerState(state, triggeredBy, action) {
@@ -177,14 +151,7 @@ class YouTubeSyncEngine {
 
     this.updateNowPlayingUI(currentTrack);
 
-    if (!this.isDeckActive) {
-      this.pendingVideoId = currentTrack.videoId;
-      this.pendingStartTime = serverPos;
-      this.isPlaying = serverPlaying;
-      return;
-    }
-
-    if (!this.isReady || !this.player || typeof this.player.getPlayerState !== "function") {
+    if (!this.isDeckActive || !this.isReady || !this.player || typeof this.player.getPlayerState !== "function") {
       this.pendingVideoId = currentTrack.videoId;
       this.pendingStartTime = serverPos;
       this.isPlaying = serverPlaying;
@@ -198,38 +165,23 @@ class YouTubeSyncEngine {
 
     try {
       if (!isSameVideo) {
-        this.player.loadVideoById({
-          videoId: currentTrack.videoId,
-          startSeconds: serverPos
-        });
+        this.player.loadVideoById({ videoId: currentTrack.videoId, startSeconds: serverPos });
         if (!serverPlaying) {
-          setTimeout(() => {
-            if (this.player && typeof this.player.pauseVideo === "function") {
-              this.player.pauseVideo();
-            }
-          }, 300);
+          setTimeout(() => { if (this.player && typeof this.player.pauseVideo === "function") this.player.pauseVideo(); }, 300);
         }
       } else {
         const localPos = this.player.getCurrentTime() || 0;
         const drift = Math.abs(localPos - serverPos);
-
-        if (drift > 1.2) {
-          this.player.seekTo(serverPos, true);
-        }
+        if (drift > 1.2) this.player.seekTo(serverPos, true);
 
         const localState = this.player.getPlayerState();
-        if (serverPlaying && localState !== YT.PlayerState.PLAYING) {
-          this.player.playVideo();
-        } else if (!serverPlaying && localState === YT.PlayerState.PLAYING) {
-          this.player.pauseVideo();
-        }
+        if (serverPlaying && localState !== YT.PlayerState.PLAYING) this.player.playVideo();
+        else if (!serverPlaying && localState === YT.PlayerState.PLAYING) this.player.pauseVideo();
       }
     } catch (e) {
       console.warn("[YT Sync] Adjust error:", e);
     } finally {
-      setTimeout(() => {
-        this.isSyncing = false;
-      }, 400);
+      setTimeout(() => { this.isSyncing = false; }, 400);
     }
 
     this.updatePlayPauseButtonUI(serverPlaying);
@@ -263,7 +215,6 @@ class YouTubeSyncEngine {
     const targetTime = duration * percent;
     
     this.player.seekTo(targetTime, true);
-    
     this.isPlaying = true;
     this.updatePlayPauseButtonUI(true);
     
@@ -304,11 +255,42 @@ class YouTubeSyncEngine {
     if (!url || !url.trim()) return;
     const cleanUrl = url.trim();
 
+    const playlistMatch = cleanUrl.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+    if (playlistMatch) {
+        const pid = playlistMatch[1];
+        try {
+            const res = await fetch(`https://yt.lemnoslife.com/playlistItems?part=snippet&playlistId=${pid}&maxResults=50`);
+            const data = await res.json();
+            if (data && data.items && data.items.length > 0) {
+                const tracks = data.items.map(item => {
+                    const snippet = item.snippet;
+                    return {
+                        id: `vid-${snippet.resourceId.videoId}-${Date.now()}-${Math.random()}`,
+                        title: snippet.title,
+                        videoId: snippet.resourceId.videoId,
+                        author: snippet.videoOwnerChannelTitle || "YouTube",
+                        thumbnail: snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url || `https://img.youtube.com/vi/${snippet.resourceId.videoId}/mqdefault.jpg`,
+                        duration: "Track"
+                    };
+                }).filter(t => t.title !== "Private video" && t.title !== "Deleted video");
+                
+                if (tracks.length > 0) {
+                    this.applyLocalAction("add-multiple", { tracks });
+                    if (this.syncSender) this.syncSender("add-multiple", { tracks });
+                    this.ensureActiveOnAdd();
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn("Error fetching playlist API, falling back to single video...", e);
+        }
+    }
+
     const videoMatch = cleanUrl.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([a-zA-Z0-9_-]{11})/);
     const videoId = videoMatch ? videoMatch[1] : null;
 
     if (!videoId) {
-      alert("Please paste a valid YouTube video URL.");
+      if (window.llamaditasApp) window.llamaditasApp.showToast("Pega un enlace de YouTube válido.");
       return;
     }
 
@@ -324,22 +306,11 @@ class YouTubeSyncEngine {
         if (data.title && !data.error) title = data.title;
         if (data.author_name) author = data.author_name;
       }
-    } catch (err) {
-      console.warn("[YT Resolver] oEmbed fetch error (using ID as title):", err);
-    }
+    } catch (err) {}
 
-    const track = {
-      id: `vid-${videoId}-${Date.now()}`,
-      title,
-      videoId,
-      author,
-      thumbnail,
-      duration: "Track"
-    };
-
+    const track = { id: `vid-${videoId}-${Date.now()}`, title, videoId, author, thumbnail, duration: "Track" };
     this.applyLocalAction("add-track", { track });
     if (this.syncSender) this.syncSender("add-track", { track });
-
     this.ensureActiveOnAdd();
   }
 
@@ -348,9 +319,7 @@ class YouTubeSyncEngine {
       if (payload.track) {
         this.queue.push(payload.track);
         this.renderQueueUI();
-        if (this.queue.length === 1) {
-          this.selectTrackLocally(0);
-        }
+        if (this.queue.length === 1) this.selectTrackLocally(0);
       }
     } else if (action === "add-multiple") {
       if (payload.tracks && payload.tracks.length > 0) {
@@ -363,9 +332,7 @@ class YouTubeSyncEngine {
       const idx = payload.index;
       if (idx >= 0 && idx < this.queue.length) {
         this.queue.splice(idx, 1);
-        if (this.currentIndex >= this.queue.length) {
-          this.currentIndex = Math.max(0, this.queue.length - 1);
-        }
+        if (this.currentIndex >= this.queue.length) this.currentIndex = Math.max(0, this.queue.length - 1);
         this.renderQueueUI();
       }
     } else if (action === "reorder") {
@@ -399,9 +366,7 @@ class YouTubeSyncEngine {
   }
 
   ensureActiveOnAdd() {
-    if (!this.isDeckActive) {
-      this.togglePower();
-    }
+    if (!this.isDeckActive) this.togglePower();
   }
 
   renderDeckStateUI() {
@@ -465,7 +430,7 @@ class YouTubeSyncEngine {
       listEl.innerHTML = `
         <div class="p-6 text-center text-xs text-gray-500 glass-subtle rounded-xl border border-white/5 space-y-2">
           <p class="font-medium text-gray-400">La cola está completamente vacía</p>
-          <p class="text-[11px] text-gray-500">Pega cualquier enlace de video o lista de reproducción de YouTube arriba para empezar a escuchar con tus amigos.</p>
+          <p class="text-[11px] text-gray-500">Pega cualquier enlace de video o lista de reproducción de YouTube arriba para empezar a escuchar.</p>
         </div>
       `;
       return;
@@ -475,11 +440,7 @@ class YouTubeSyncEngine {
     this.queue.forEach((item, index) => {
       const isCurrent = index === this.currentIndex;
       const row = document.createElement("div");
-      row.className = `group flex items-center justify-between p-2.5 rounded-xl border transition-all ${
-        isCurrent
-          ? "bg-accent/15 border-accent/40 shadow-sm"
-          : "bg-white/5 hover:bg-white/10 border-white/5"
-      }`;
+      row.className = `group flex items-center justify-between p-2.5 rounded-xl border transition-all ${isCurrent ? "bg-accent/15 border-accent/40 shadow-sm" : "bg-white/5 hover:bg-white/10 border-white/5"}`;
       row.draggable = true;
       row.dataset.index = index;
 
@@ -499,34 +460,22 @@ class YouTubeSyncEngine {
         </div>
       `;
 
-      row.addEventListener("dragstart", (e) => {
-        e.dataTransfer.setData("text/plain", index);
-        row.classList.add("dragging");
-      });
-      row.addEventListener("dragend", () => {
-        row.classList.remove("dragging");
-      });
-      row.addEventListener("dragover", (e) => {
-        e.preventDefault();
-      });
+      row.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", index); row.classList.add("dragging"); });
+      row.addEventListener("dragend", () => { row.classList.remove("dragging"); });
+      row.addEventListener("dragover", (e) => { e.preventDefault(); });
       row.addEventListener("drop", (e) => {
         e.preventDefault();
         const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10);
         const toIdx = index;
-        if (!isNaN(fromIdx) && fromIdx !== toIdx) {
-          this.reorderTrack(fromIdx, toIdx);
-        }
+        if (!isNaN(fromIdx) && fromIdx !== toIdx) this.reorderTrack(fromIdx, toIdx);
       });
-
       listEl.appendChild(row);
     });
   }
 
   moveItem(index, direction) {
     const target = index + direction;
-    if (target >= 0 && target < this.queue.length) {
-      this.reorderTrack(index, target);
-    }
+    if (target >= 0 && target < this.queue.length) this.reorderTrack(index, target);
   }
 
   startProgressTracking() {
@@ -534,7 +483,6 @@ class YouTubeSyncEngine {
 
     this.progressInterval = setInterval(() => {
       if (!this.player || !this.isReady || typeof this.player.getCurrentTime !== "function") return;
-
       const curr = this.player.getCurrentTime() || 0;
       const total = this.player.getDuration() || 0;
 
@@ -544,11 +492,8 @@ class YouTubeSyncEngine {
         return `${m}:${String(s).padStart(2, "0")}`;
       };
 
-      const currStr = formatTime(curr);
-      const totalStr = formatTime(total);
-
-      document.querySelectorAll(".playback-curr-time").forEach(el => el.innerText = currStr);
-      document.querySelectorAll(".playback-total-time").forEach(el => el.innerText = totalStr);
+      document.querySelectorAll(".playback-curr-time").forEach(el => el.innerText = formatTime(curr));
+      document.querySelectorAll(".playback-total-time").forEach(el => el.innerText = formatTime(total));
 
       if (total > 0) {
         const pct = Math.min(100, (curr / total) * 100);

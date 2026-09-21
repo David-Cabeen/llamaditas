@@ -1,4 +1,4 @@
-﻿// SyncWave Supabase Realtime P2P Signaling Engine (Explicit Handshake)
+﻿// Llamaditas Supabase Realtime P2P Signaling Engine
 class SupabaseP2P {
   constructor() {
     this.client = null;
@@ -8,22 +8,20 @@ class SupabaseP2P {
     this.userName = null;
     this.isConnected = false;
 
-    // Active Production Supabase Credentials
     const DEFAULT_URL = "https://jeboqfrsscbdwdgyjfdn.supabase.co";
     const DEFAULT_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImplYm9xZnJzc2NiZHdkZ3lqZmRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3Mzc4NDQsImV4cCI6MjEwNTMxMzg0NH0.AYAvpNr9VUnqoTDl3w-g7BEue4AXjyud-GYHRQ2GaIg";
 
-    const savedUrl = localStorage.getItem("syncwave_sb_url");
+    const savedUrl = localStorage.getItem("llamaditas_sb_url");
     if (!savedUrl || savedUrl.includes("qxtlyeakqbbpffxebiqc")) {
-      localStorage.setItem("syncwave_sb_url", DEFAULT_URL);
-      localStorage.setItem("syncwave_sb_key", DEFAULT_KEY);
+      localStorage.setItem("llamaditas_sb_url", DEFAULT_URL);
+      localStorage.setItem("llamaditas_sb_key", DEFAULT_KEY);
       this.supabaseUrl = DEFAULT_URL;
       this.supabaseKey = DEFAULT_KEY;
     } else {
       this.supabaseUrl = savedUrl;
-      this.supabaseKey = localStorage.getItem("syncwave_sb_key") || DEFAULT_KEY;
+      this.supabaseKey = localStorage.getItem("llamaditas_sb_key") || DEFAULT_KEY;
     }
 
-    // Inicializar el cliente globalmente de inmediato para que Auth funcione en el Landing
     if (window.supabase) {
       this.client = window.supabase.createClient(this.supabaseUrl, this.supabaseKey, {
         realtime: {
@@ -32,15 +30,15 @@ class SupabaseP2P {
           }
         }
       });
-      window.supabaseClient = this.client; // Exportar instancia para app.js
+      window.supabaseClient = this.client;
     }
   }
 
   saveCredentials(url, key) {
     this.supabaseUrl = url.trim();
     this.supabaseKey = key.trim();
-    localStorage.setItem("syncwave_sb_url", this.supabaseUrl);
-    localStorage.setItem("syncwave_sb_key", this.supabaseKey);
+    localStorage.setItem("llamaditas_sb_url", this.supabaseUrl);
+    localStorage.setItem("llamaditas_sb_key", this.supabaseKey);
     console.log("[Supabase] Credentials updated");
   }
 
@@ -65,7 +63,7 @@ class SupabaseP2P {
     }
 
     try {
-      const channelName = `syncwave_room_${this.roomId}`;
+      const channelName = `llamaditas_room_${this.roomId}`;
       this.channel = this.client.channel(channelName, {
         config: {
           broadcast: { self: false, ack: false },
@@ -73,7 +71,6 @@ class SupabaseP2P {
         }
       });
 
-      // 1. Peer Announce
       this.channel.on("broadcast", { event: "peer-announce" }, ({ payload }) => {
         if (payload && payload.from !== this.peerId) {
           console.log(`[Supabase P2P] Received announcement from ${payload.name} (${payload.from})`);
@@ -92,7 +89,6 @@ class SupabaseP2P {
         }
       });
 
-      // Peer Announce Reply
       this.channel.on("broadcast", { event: "peer-announce-reply" }, ({ payload }) => {
         if (payload && payload.target === this.peerId) {
           console.log(`[Supabase P2P] Discovered existing peer ${payload.name} (${payload.from})`);
@@ -106,35 +102,30 @@ class SupabaseP2P {
         }
       });
 
-      // 2. WebRTC Signaling via Broadcast
       this.channel.on("broadcast", { event: "signal" }, ({ payload }) => {
         if (payload && payload.target === this.peerId) {
           onSignal(payload.from, payload.signalType, payload.payload);
         }
       });
 
-      // 3. Music Playback Sync
       this.channel.on("broadcast", { event: "music" }, ({ payload }) => {
         if (payload && payload.from !== this.peerId) {
           onMusicAction(payload.action, payload.payload, payload.from);
         }
       });
 
-      // 4. User Media State Updates
       this.channel.on("broadcast", { event: "user-state" }, ({ payload }) => {
         if (payload && payload.from !== this.peerId) {
           onUserState(payload);
         }
       });
 
-      // 5. Screen Share State Updates
       this.channel.on("broadcast", { event: "screen-state" }, ({ payload }) => {
         if (payload && payload.from !== this.peerId) {
-          if (window.syncApp) window.syncApp.handlePeerScreenState(payload.from, payload.isSharing);
+          if (window.llamaditasApp) window.llamaditasApp.handlePeerScreenState(payload.from, payload.isSharing);
         }
       });
 
-      // 6. Presence Tracking
       this.channel.on("presence", { event: "sync" }, () => {
         const state = this.channel.presenceState();
         Object.entries(state).forEach(([pid, presences]) => {
@@ -153,9 +144,9 @@ class SupabaseP2P {
       this.channel.on("broadcast", { event: "chat" }, ({ payload }) => {
         if (payload.isPrivate && payload.target !== this.peerId) return;
         
-        if (window.syncApp) {
-          window.syncApp.renderChatMessage(payload.name, payload.msg, payload.avatar, false, payload.isPrivate);
-          window.syncApp.showChatToast(payload.name, payload.msg, payload.avatar, payload.isPrivate);
+        if (window.llamaditasApp) {
+          window.llamaditasApp.renderChatMessage(payload.name, payload.msg, payload.avatar, false, payload.isPrivate);
+          window.llamaditasApp.showChatToast(payload.name, payload.msg, payload.avatar, payload.isPrivate);
         }
       });
 
@@ -166,8 +157,8 @@ class SupabaseP2P {
           
           await this.channel.track({
             name: this.userName,
-            username: window.syncApp.username, // CRITICAL: Para asegurar DMs
-            avatar_url: window.syncApp.avatarUrl,
+            username: window.llamaditasApp.username,
+            avatar_url: window.llamaditasApp.avatarUrl,
             mic: true,
             cam: false,
             joinedAt: Date.now()
@@ -182,12 +173,12 @@ class SupabaseP2P {
             }
           });
 
-          if (window.syncApp) {
-            window.syncApp.updateConnectionStatus(true, "P2P de Supabase conectado");
+          if (window.llamaditasApp) {
+            window.llamaditasApp.updateConnectionStatus(true, "P2P de Supabase conectado");
           }
         } else if (status === "CHANNEL_ERROR") {
-          if (window.syncApp) {
-            window.syncApp.updateConnectionStatus(false, "Supabase reconectando...");
+          if (window.llamaditasApp) {
+            window.llamaditasApp.updateConnectionStatus(false, "Supabase reconectando...");
           }
         }
       });
