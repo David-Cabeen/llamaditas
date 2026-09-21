@@ -383,10 +383,10 @@ class YouTubeSyncEngine {
     if (powerBtn) {
       if (this.isDeckActive) {
         powerBtn.className = "px-2.5 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/30 transition flex items-center gap-1";
-        powerBtn.innerHTML = `<span>● Cabina ON</span>`;
+        powerBtn.innerHTML = `<span>● Deck encendido</span>`;
       } else {
         powerBtn.className = "px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-gray-400 text-xs font-semibold transition flex items-center gap-1";
-        powerBtn.innerHTML = `<span>○ Cabina apagada (reposo)</span>`;
+        powerBtn.innerHTML = `<span>○ Deck apagado</span>`;
       }
     }
 
