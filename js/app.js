@@ -394,6 +394,8 @@ class LlamaditasApp {
         yt.queue.splice(toIndex, 0, item);
         yt.renderQueueUI();
       }
+    } else if (action === "shuffle") {
+      yt.applyLocalAction("shuffle", payload);
     }
   }
 

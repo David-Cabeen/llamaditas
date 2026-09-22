@@ -257,6 +257,23 @@ class YouTubeSyncEngine {
     if (this.syncSender) this.syncSender("reorder", { fromIndex, toIndex });
   }
 
+  shuffleQueue() {
+    if (this.queue.length < 2) return;
+
+    const currentTrack = this.queue[this.currentIndex];
+    const remainingTracks = this.queue.filter((_, index) => index !== this.currentIndex);
+    for (let index = remainingTracks.length - 1; index > 0; index--) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [remainingTracks[index], remainingTracks[randomIndex]] = [remainingTracks[randomIndex], remainingTracks[index]];
+    }
+
+    remainingTracks.splice(this.currentIndex, 0, currentTrack);
+    this.applyLocalAction("shuffle", { queue: remainingTracks, currentIndex: this.currentIndex });
+    if (this.syncSender) {
+      this.syncSender("shuffle", { queue: remainingTracks, currentIndex: this.currentIndex });
+    }
+  }
+
   async addLink(url) {
     if (!url || !url.trim()) return;
     const cleanUrl = url.trim();
@@ -327,14 +344,18 @@ class YouTubeSyncEngine {
         const tracks = videos.map(video => {
           const videoId = video.videoId;
           if (!videoId) return null;
+          const thumbnail = video.videoThumbnails?.find(item => item.quality === "medium")?.url
+            || video.videoThumbnails?.[0]?.url
+            || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+          const resolvedThumbnail = thumbnail.startsWith("/")
+            ? `${new URL(endpoint).origin}${thumbnail}`
+            : thumbnail;
           return {
             id: `vid-${videoId}-${Date.now()}-${Math.random()}`,
             title: video.title || `YouTube Track (${videoId})`,
             videoId,
             author: video.author || "YouTube",
-            thumbnail: video.videoThumbnails?.find(thumbnail => thumbnail.quality === "medium")?.url
-              || video.videoThumbnails?.[0]?.url
-              || `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+            thumbnail: resolvedThumbnail,
             duration: "Track"
           };
         }).filter(track => track && track.title !== "Private video" && track.title !== "Deleted video");
@@ -374,6 +395,12 @@ class YouTubeSyncEngine {
       if (fromIndex >= 0 && fromIndex < this.queue.length && toIndex >= 0 && toIndex < this.queue.length) {
         const item = this.queue.splice(fromIndex, 1)[0];
         this.queue.splice(toIndex, 0, item);
+        this.renderQueueUI();
+      }
+    } else if (action === "shuffle") {
+      if (Array.isArray(payload.queue) && payload.queue.length === this.queue.length) {
+        this.queue = payload.queue;
+        this.currentIndex = payload.currentIndex || 0;
         this.renderQueueUI();
       }
     } else if (action === "select-track") {
@@ -433,7 +460,13 @@ class YouTubeSyncEngine {
     document.querySelectorAll(".now-playing-title").forEach(el => el.innerText = track.title || "Título desconocido");
     document.querySelectorAll(".now-playing-author").forEach(el => el.innerText = track.author || "Música de YouTube");
     document.querySelectorAll(".now-playing-art").forEach(el => {
-      if (el.tagName === "IMG") el.src = track.thumbnail;
+      if (el.tagName === "IMG") {
+        el.onerror = () => {
+          el.onerror = null;
+          el.src = `https://img.youtube.com/vi/${track.videoId}/mqdefault.jpg`;
+        };
+        el.src = track.thumbnail;
+      }
     });
   }
 
@@ -492,7 +525,7 @@ class YouTubeSyncEngine {
       row.innerHTML = `
         <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onclick="window.ytSync.selectTrack(${index})">
           <span class="text-xs font-mono ${isCurrent ? "custom-accent font-bold" : "text-gray-500"}">${String(index + 1).padStart(2, "0")}</span>
-          <img src="${item.thumbnail}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0">
+          <img src="${item.thumbnail}" onerror="this.onerror=null;this.src='https://img.youtube.com/vi/${item.videoId}/mqdefault.jpg'" loading="lazy" decoding="async" class="w-8 h-8 rounded-lg object-cover flex-shrink-0" alt="">
           <div class="min-w-0 pr-2">
             <p class="text-xs font-medium truncate ${isCurrent ? "text-white font-semibold" : "text-gray-200"}">${item.title}</p>
             <p class="text-[10px] text-gray-400 truncate">${item.author || "YouTube"}</p>
