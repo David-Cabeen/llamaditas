@@ -2,13 +2,10 @@
   "name": "llamaditas-static",
   "private": true,
   "scripts": {
-    "build": "node build-assets.mjs",
     "build:css": "tailwindcss -i ./css/app.css -o ./css/app.build.css --minify",
     "watch:css": "tailwindcss -i ./css/app.css -o ./css/app.build.css --watch"
   },
   "devDependencies": {
-    "@supabase/supabase-js": "^2.57.4",
-    "esbuild": "^0.25.9",
     "tailwindcss": "^3.4.17"
   }
 }

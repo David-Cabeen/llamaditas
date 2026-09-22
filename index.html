@@ -7,13 +7,15 @@
   
   <link rel="manifest" href="./manifest.json">
   <link rel="preconnect" href="https://jeboqfrsscbdwdgyjfdn.supabase.co" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <meta name="theme-color" content="#8b5cf6">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Llamaditas">
   <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/192x192/1f4fe.png">
 
-  <link rel="stylesheet" href="./css/app.58a879c12fdb.css">
+  <link rel="stylesheet" href="./css/app.build.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="min-h-screen flex flex-col antialiased select-none text-gray-100 relative overflow-x-hidden">
 
@@ -419,6 +421,12 @@
     <span id="toast-msg">Mensaje de notificación</span>
   </div>
 
-  <script defer src="./js/app.3d997346b661.js"></script>
+  <script defer src="./js/sfx.js"></script>
+  <script defer src="./js/theme.js"></script>
+  <script defer src="./js/audio_mixer.js"></script>
+  <script defer src="./js/yt_sync.js"></script>
+  <script defer src="./js/webrtc.js"></script>
+  <script defer src="./js/supabase_p2p.js"></script>
+  <script defer src="./js/app.js"></script>
 </body>
 </html>
