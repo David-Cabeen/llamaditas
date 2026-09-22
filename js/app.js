@@ -79,10 +79,10 @@ class LlamaditasApp {
       }
     });
 
-    window.addEventListener("resize", () => this.positionTheaterPortal());
+    window.addEventListener("resize", () => this.scheduleTheaterPortalPosition(), { passive: true });
     document.addEventListener("fullscreenchange", () => {
       document.body.classList.toggle("theater-fullscreen", !!document.fullscreenElement);
-      this.positionTheaterPortal();
+      this.scheduleTheaterPortalPosition();
     });
   }
 
@@ -863,8 +863,16 @@ class LlamaditasApp {
     });
     this.updateLayoutIndicator(layout);
     if (layoutChanged) window.sfx.play("layoutSelect");
-    requestAnimationFrame(() => this.positionTheaterPortal());
+    this.scheduleTheaterPortalPosition();
     this.renderVideoTiles();
+  }
+
+  scheduleTheaterPortalPosition() {
+    if (this.theaterPortalFrame) return;
+    this.theaterPortalFrame = requestAnimationFrame(() => {
+      this.theaterPortalFrame = null;
+      this.positionTheaterPortal();
+    });
   }
 
   positionTheaterPortal() {
@@ -874,7 +882,7 @@ class LlamaditasApp {
     if (this.currentLayout === "cinema") {
       const rect = slot.getBoundingClientRect();
       if (rect.width < 2 || rect.height < 2) {
-        requestAnimationFrame(() => this.positionTheaterPortal());
+        this.scheduleTheaterPortalPosition();
         return;
       }
       Object.assign(portal.style, {
