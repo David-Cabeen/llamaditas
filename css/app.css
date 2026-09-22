@@ -216,7 +216,7 @@ input[type=range] {
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 5px;
+  height: 8px;
   aspect-ratio: 1;
   border-radius: 50%;
   outline: transparent;
@@ -227,7 +227,7 @@ input[type=range]::-webkit-slider-thumb {
   transition: transform 0.15s ease, background-color 0.2s ease;
 }
 input[type=range]::-moz-range-thumb {
-  width: 5px;
+  height: 8px;
   aspect-ratio: 1;
   outline: transparent;
   border: none;
