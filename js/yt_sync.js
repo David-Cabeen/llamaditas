@@ -310,6 +310,32 @@ class YouTubeSyncEngine {
   }
 
   async fetchPlaylistTracks(playlistId) {
+    const youtubeEndpoint = "https://www.youtube.com/youtubei/v1/browse?prettyPrint=false";
+    const youtubeClient = {
+      context: {
+        client: {
+          clientName: "WEB",
+          clientVersion: "2.20260918.01.00"
+        }
+      },
+      browseId: `VL${playlistId}`
+    };
+
+    try {
+      const response = await fetch(youtubeEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(youtubeClient)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const items = this.extractYouTubePlaylistItems(data);
+        if (items.length > 0) return items;
+      }
+    } catch (error) {
+      console.warn("YouTube playlist endpoint failed:", error.message);
+    }
+
     const endpoints = [
       `https://yt.lemnoslife.com/noKey/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=50`,
       `https://yt.lemnoslife.com/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=50`
@@ -344,6 +370,28 @@ class YouTubeSyncEngine {
       }
     }
     return [];
+  }
+
+  extractYouTubePlaylistItems(data) {
+    const contents = data?.contents?.twoColumnBrowseResultsRenderer?.tabs
+      ?.flatMap(tab => tab.tabRenderer?.content?.sectionListRenderer?.contents || [])
+      .flatMap(section => section.itemSectionRenderer?.contents || [])
+      .flatMap(section => section.playlistVideoListRenderer?.contents || []) || [];
+
+    return contents.map(item => {
+      const video = item.playlistVideoRenderer;
+      if (!video?.videoId) return null;
+      const title = video.title?.runs?.map(run => run.text).join("") || `YouTube Track (${video.videoId})`;
+      const author = video.shortBylineText?.runs?.map(run => run.text).join("") || "YouTube";
+      return {
+        id: `vid-${video.videoId}-${Date.now()}-${Math.random()}`,
+        title,
+        videoId: video.videoId,
+        author,
+        thumbnail: video.thumbnail?.thumbnails?.slice(-1)[0]?.url || `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`,
+        duration: "Track"
+      };
+    }).filter(track => track && track.title !== "Private video" && track.title !== "Deleted video");
   }
 
   applyLocalAction(action, payload) {
