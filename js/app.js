@@ -23,6 +23,8 @@ class LlamaditasApp {
     this.recordedCallPartnerIds = new Set();
     this.lastPartnerStatAt = 0;
     this.callStatsInterval = null;
+    this.micLevelFrame = null;
+    this.pendingMicLevel = 0;
     this.deferredPwaPrompt = null;
     this.stats = { totalCalls: 0, totalTimeSec: 0, topFriendName: '', topFriendAvatar: '', topFriendLink: '#' };
 
@@ -54,8 +56,13 @@ class LlamaditasApp {
     };
 
     window.audioMixer.onLocalMicActivity = (level) => {
-      const bars = document.querySelectorAll(".local-mic-level-bar");
-      bars.forEach(bar => bar.style.width = `${level}%`);
+      this.pendingMicLevel = level;
+      if (this.micLevelFrame) return;
+      this.micLevelFrame = requestAnimationFrame(() => {
+        this.micLevelFrame = null;
+        const bars = document.querySelectorAll(".local-mic-level-bar");
+        bars.forEach(bar => bar.style.width = `${this.pendingMicLevel}%`);
+      });
     };
 
     window.webrtcManager.onRemoteTrackAdded = (peerId, stream, info, isScreen) => {

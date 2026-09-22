@@ -1,0 +1,11 @@
+{
+  "name": "llamaditas-static",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./css/app.css -o ./css/app.build.css --minify",
+    "watch:css": "tailwindcss -i ./css/app.css -o ./css/app.build.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

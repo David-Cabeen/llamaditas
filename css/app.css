@@ -1,4 +1,8 @@
-﻿/* Llamaditas Main Design System */
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Llamaditas Main Design System */
 :root {
   --accent: #8b5cf6;
   --accent-rgb: 139, 92, 246;
@@ -299,7 +303,19 @@ input[type=range]::-webkit-slider-thumb:hover {
 #youtube-slide-drawer { will-change: transform; }
 #deck-active-card { min-height: 0; }
 #queue-items-container {
+  height: 0;
+  flex: 1 1 0%;
   min-height: clamp(270px, 32vh, 340px);
+}
+#queue-items-container.queue-virtualized {
+  display: block;
+}
+#queue-items-container.queue-virtualized .queue-row {
+  min-height: 52px;
+  margin-bottom: 8px;
+}
+#queue-items-container.queue-virtualized .queue-virtual-spacer {
+  pointer-events: none;
 }
 #mic-dropdown-menu { transform-origin: bottom left; }
 #mic-dropdown-menu:not(.hidden), #chat-command-menu:not(.hidden) { animation: surface-pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both; }

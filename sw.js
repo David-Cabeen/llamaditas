@@ -1,8 +1,8 @@
-const CACHE_NAME = "llamaditas-pwa-v2";
+const CACHE_NAME = "llamaditas-pwa-v3";
 const ASSETS = [
   "./",
   "./index.html",
-  "./css/app.css",
+  "./css/app.build.css",
   "./js/app.js",
   "./js/theme.js",
   "./js/audio_mixer.js",
@@ -34,7 +34,21 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    caches.match(event.request).then((cachedResponse) => {
+      const networkResponse = fetch(event.request).then((response) => {
+        if (response.ok) {
+          const responseCopy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseCopy));
+        }
+        return response;
+      }).catch(() => cachedResponse);
+
+      return cachedResponse || networkResponse;
+    })
   );
 });

@@ -11,6 +11,8 @@ class YouTubeSyncEngine {
     this.isSyncing = false;
     this.progressInterval = null;
     this.queueInteractionsBound = false;
+    this.queueVirtualizationBound = false;
+    this.queueVirtualizationFrame = null;
     this.pendingVideoId = null;
     this.pendingStartTime = 0;
   }
@@ -516,58 +518,107 @@ class YouTubeSyncEngine {
       return;
     }
 
+    if (this.queue.length > 80) {
+      this.renderVirtualizedQueue(listEl);
+      return;
+    }
+
+    listEl.classList.remove("queue-virtualized");
+    listEl.classList.add("space-y-2");
     listEl.innerHTML = "";
     this.queue.forEach((item, index) => {
-      const isCurrent = index === this.currentIndex;
-      const row = document.createElement("div");
-      row.className = `group flex items-center justify-between p-2.5 rounded-xl border transition-all ${isCurrent ? "bg-accent/15 border-accent/40 shadow-sm" : "bg-white/5 hover:bg-white/10 border-white/5"}`;
-      row.draggable = true;
-      row.dataset.index = index;
-
-      row.innerHTML = `
-        <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onclick="window.ytSync.selectTrack(${index})">
-          <span class="text-xs font-mono ${isCurrent ? "custom-accent font-bold" : "text-gray-500"}">${String(index + 1).padStart(2, "0")}</span>
-          <img src="${item.thumbnail}" onerror="this.onerror=null;this.src='https://img.youtube.com/vi/${item.videoId}/mqdefault.jpg'" loading="lazy" decoding="async" class="w-8 h-8 rounded-lg object-cover flex-shrink-0" alt="">
-          <div class="min-w-0 pr-2">
-            <p class="text-xs font-medium truncate ${isCurrent ? "text-white font-semibold" : "text-gray-200"}">${item.title}</p>
-            <p class="text-[10px] text-gray-400 truncate">${item.author || "YouTube"}</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 flex-shrink-0">
-          <button onclick="window.ytSync.moveItem(${index}, -1)" class="p-1 text-gray-400 hover:text-white rounded" title="Move Up" ${index === 0 ? "disabled" : ""}>▲</button>
-          <button onclick="window.ytSync.moveItem(${index}, 1)" class="p-1 text-gray-400 hover:text-white rounded" title="Move Down" ${index === this.queue.length - 1 ? "disabled" : ""}>▼</button>
-          <button onclick="window.ytSync.removeTrack(${index})" class="p-1 text-red-400 hover:text-red-300 rounded ml-1" title="Remove">✕</button>
-        </div>
-      `;
-
-      listEl.appendChild(row);
+      listEl.appendChild(this.createQueueRow(item, index));
     });
   }
 
-  bindQueueInteractions(listEl) {
-    if (this.queueInteractionsBound) return;
-    this.queueInteractionsBound = true;
+  createQueueRow(item, index) {
+    const isCurrent = index === this.currentIndex;
+    const row = document.createElement("div");
+    row.className = `queue-row group flex items-center justify-between p-2.5 rounded-xl border transition-all ${isCurrent ? "bg-accent/15 border-accent/40 shadow-sm" : "bg-white/5 hover:bg-white/10 border-white/5"}`;
+    row.draggable = true;
+    row.dataset.index = index;
+    row.innerHTML = `
+      <div class="flex items-center gap-3 min-w-0 flex-1 cursor-pointer" onclick="window.ytSync.selectTrack(${index})">
+        <span class="text-xs font-mono ${isCurrent ? "custom-accent font-bold" : "text-gray-500"}">${String(index + 1).padStart(2, "0")}</span>
+        <img src="${item.thumbnail}" onerror="this.onerror=null;this.src='https://img.youtube.com/vi/${item.videoId}/mqdefault.jpg'" loading="lazy" decoding="async" width="32" height="32" class="w-8 h-8 rounded-lg object-cover flex-shrink-0" alt="">
+        <div class="min-w-0 pr-2">
+          <p class="text-xs font-medium truncate ${isCurrent ? "text-white font-semibold" : "text-gray-200"}">${item.title}</p>
+          <p class="text-[10px] text-gray-400 truncate">${item.author || "YouTube"}</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 flex-shrink-0">
+        <button onclick="window.ytSync.moveItem(${index}, -1)" class="p-1 text-gray-400 hover:text-white rounded" title="Move Up" ${index === 0 ? "disabled" : ""}>▲</button>
+        <button onclick="window.ytSync.moveItem(${index}, 1)" class="p-1 text-gray-400 hover:text-white rounded" title="Move Down" ${index === this.queue.length - 1 ? "disabled" : ""}>▼</button>
+        <button onclick="window.ytSync.removeTrack(${index})" class="p-1 text-red-400 hover:text-red-300 rounded ml-1" title="Remove">✕</button>
+      </div>
+    `;
+    return row;
+  }
 
-    listEl.addEventListener("dragstart", (event) => {
-      const row = event.target.closest("[data-index]");
-      if (!row) return;
-      event.dataTransfer.setData("text/plain", row.dataset.index);
-      row.classList.add("dragging");
-    });
-    listEl.addEventListener("dragend", (event) => {
-      event.target.closest("[data-index]")?.classList.remove("dragging");
-    });
-    listEl.addEventListener("dragover", (event) => {
-      if (event.target.closest("[data-index]")) event.preventDefault();
-    });
-    listEl.addEventListener("drop", (event) => {
-      const row = event.target.closest("[data-index]");
-      if (!row) return;
-      event.preventDefault();
-      const fromIndex = Number.parseInt(event.dataTransfer.getData("text/plain"), 10);
-      const toIndex = Number.parseInt(row.dataset.index, 10);
-      if (!Number.isNaN(fromIndex) && fromIndex !== toIndex) this.reorderTrack(fromIndex, toIndex);
-    });
+  renderVirtualizedQueue(listEl) {
+    listEl.classList.add("queue-virtualized");
+    listEl.classList.remove("space-y-2");
+    const rowHeight = 60;
+    const viewportHeight = listEl.clientHeight || 300;
+    const visibleRows = Math.ceil(viewportHeight / rowHeight) + 4;
+    const start = Math.max(0, Math.floor(listEl.scrollTop / rowHeight) - 2);
+    const end = Math.min(this.queue.length, start + visibleRows);
+    const fragment = document.createDocumentFragment();
+
+    const topSpacer = document.createElement("div");
+    topSpacer.className = "queue-virtual-spacer";
+    topSpacer.style.height = `${start * rowHeight}px`;
+    fragment.appendChild(topSpacer);
+
+    for (let index = start; index < end; index++) {
+      fragment.appendChild(this.createQueueRow(this.queue[index], index));
+    }
+
+    const bottomSpacer = document.createElement("div");
+    bottomSpacer.className = "queue-virtual-spacer";
+    bottomSpacer.style.height = `${Math.max(0, this.queue.length - end) * rowHeight}px`;
+    fragment.appendChild(bottomSpacer);
+
+    const scrollTop = listEl.scrollTop;
+    listEl.replaceChildren(fragment);
+    listEl.scrollTop = scrollTop;
+  }
+
+  bindQueueInteractions(listEl) {
+    if (!this.queueInteractionsBound) {
+      this.queueInteractionsBound = true;
+
+      listEl.addEventListener("dragstart", (event) => {
+        const row = event.target.closest("[data-index]");
+        if (!row) return;
+        event.dataTransfer.setData("text/plain", row.dataset.index);
+        row.classList.add("dragging");
+      });
+      listEl.addEventListener("dragend", (event) => {
+        event.target.closest("[data-index]")?.classList.remove("dragging");
+      });
+      listEl.addEventListener("dragover", (event) => {
+        if (event.target.closest("[data-index]")) event.preventDefault();
+      });
+      listEl.addEventListener("drop", (event) => {
+        const row = event.target.closest("[data-index]");
+        if (!row) return;
+        event.preventDefault();
+        const fromIndex = Number.parseInt(event.dataTransfer.getData("text/plain"), 10);
+        const toIndex = Number.parseInt(row.dataset.index, 10);
+        if (!Number.isNaN(fromIndex) && fromIndex !== toIndex) this.reorderTrack(fromIndex, toIndex);
+      });
+    }
+
+    if (this.queueVirtualizationBound) return;
+    this.queueVirtualizationBound = true;
+    listEl.addEventListener("scroll", () => {
+      if (this.queue.length <= 80 || this.queueVirtualizationFrame) return;
+      this.queueVirtualizationFrame = setTimeout(() => {
+        this.queueVirtualizationFrame = null;
+        this.renderVirtualizedQueue(listEl);
+      }, 16);
+    }, { passive: true });
   }
 
   moveItem(index, direction) {

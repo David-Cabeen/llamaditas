@@ -6,15 +6,16 @@
   <title>Llamaditas - Videollamadas P2P y Youtube Sincronizado</title>
   
   <link rel="manifest" href="./manifest.json">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://jeboqfrsscbdwdgyjfdn.supabase.co" crossorigin>
   <meta name="theme-color" content="#8b5cf6">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Llamaditas">
   <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/192x192/1f4fe.png">
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="./css/app.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="./css/app.build.css">
 </head>
 <body class="min-h-screen flex flex-col antialiased select-none text-gray-100 relative overflow-x-hidden">
 
@@ -287,7 +288,7 @@
     </div>
     <div id="deck-active-card" class="hidden flex flex-col gap-4 flex-1 overflow-y-auto pr-1">
       <div class="relative rounded-xl overflow-hidden bg-black border border-white/10 aspect-square w-full max-w-[180px] sm:max-w-[220px] mx-auto glow-subtle">
-        <img class="now-playing-art w-full h-full object-cover" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80" alt="Carátula actual">
+        <img class="now-playing-art w-full h-full object-cover" src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&auto=format&fit=crop&q=80" width="220" height="220" loading="lazy" decoding="async" alt="Carátula actual">
         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/5 to-transparent"></div>
         <div class="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -334,7 +335,7 @@
           <span>Añadir</span>
         </button>
       </div>
-      <div class="flex flex-col gap-2 flex-1">
+      <div class="flex flex-col gap-2 flex-1 min-h-0">
         <div class="flex items-center justify-between text-xs text-gray-400">
           <span class="font-semibold uppercase text-[10px] tracking-wider text-gray-300">Siguiente en la cola (<span id="queue-count-badge">0</span>)</span>
         </div>
@@ -420,12 +421,12 @@
     <span id="toast-msg">Mensaje de notificación</span>
   </div>
 
-  <script src="./js/sfx.js"></script>
-  <script src="./js/theme.js"></script>
-  <script src="./js/audio_mixer.js"></script>
-  <script src="./js/yt_sync.js"></script>
-  <script src="./js/webrtc.js"></script>
-  <script src="./js/supabase_p2p.js"></script>
-  <script src="./js/app.js"></script>
+  <script defer src="./js/sfx.js"></script>
+  <script defer src="./js/theme.js"></script>
+  <script defer src="./js/audio_mixer.js"></script>
+  <script defer src="./js/yt_sync.js"></script>
+  <script defer src="./js/webrtc.js"></script>
+  <script defer src="./js/supabase_p2p.js"></script>
+  <script defer src="./js/app.js"></script>
 </body>
 </html>
