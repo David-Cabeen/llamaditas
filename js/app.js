@@ -648,7 +648,6 @@ class LlamaditasApp {
   }
 
   onMusicVolumeSlider(val) {
-    window.audioMixer.setMusicVolume(val);
     const disp = document.getElementById("mixer-disp-music-vol");
     if (disp) disp.innerText = `${val}%`;
 
@@ -656,10 +655,17 @@ class LlamaditasApp {
     if (deckDisp) {
       deckDisp.innerText = `${val}%`;
       deckDisp.style.left = `${val}%`;
+      deckDisp.classList.add("is-visible");
+      clearTimeout(this.volumePopupTimeout);
+      this.volumePopupTimeout = setTimeout(() => {
+        deckDisp.classList.remove("is-visible");
+      }, 1000);
     }
 
     const deckSlider = document.getElementById("deck-music-vol-slider");
     if (deckSlider) deckSlider.value = val;
+
+    window.audioMixer.setMusicVolume(val);
   }
 
   onPeerVolumeSlider(peerId, val) {
