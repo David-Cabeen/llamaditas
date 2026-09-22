@@ -22,6 +22,7 @@ class LlamaditasApp {
     this.callPartnerIds = new Set();
     this.recordedCallPartnerIds = new Set();
     this.lastPartnerStatAt = 0;
+    this.callStatsInterval = null;
     this.deferredPwaPrompt = null;
     this.stats = { totalCalls: 0, totalTimeSec: 0, topFriendName: '', topFriendAvatar: '', topFriendLink: '#' };
 
@@ -164,7 +165,8 @@ class LlamaditasApp {
 
     this.connectSupabase();
 
-    setInterval(() => {
+    clearInterval(this.callStatsInterval);
+    this.callStatsInterval = setInterval(() => {
       if (this.callStartTime > 0) {
         const elapsedSecs = Math.floor((Date.now() - this.callStartTime) / 1000);
         if (elapsedSecs > 0 && elapsedSecs % 60 === 0 && this.lastPartnerStatAt < this.callStartTime + elapsedSecs * 1000) {
@@ -654,7 +656,7 @@ class LlamaditasApp {
     const deckDisp = document.getElementById("deck-music-vol-val");
     if (deckDisp) {
       deckDisp.innerText = `${val}%`;
-      deckDisp.style.left = `${val}%`;
+      deckDisp.style.setProperty("--volume-position", `${val}%`);
       deckDisp.classList.add("is-visible");
       clearTimeout(this.volumePopupTimeout);
       this.volumePopupTimeout = setTimeout(() => {
@@ -914,6 +916,8 @@ class LlamaditasApp {
   
   async leaveCall() {
     window.sfx.play("callExit");
+    clearInterval(this.callStatsInterval);
+    this.callStatsInterval = null;
     if (this.callStartTime > 0) {
       const unsavedSeconds = Math.max(0, Math.floor((Date.now() - this.lastPartnerStatAt) / 1000));
       if (unsavedSeconds > 0) await this.updatePartnerTime(unsavedSeconds);

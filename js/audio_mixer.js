@@ -167,9 +167,12 @@ class AudioMixer {
   setMusicVolume(volumePercent) {
     const vol = Math.max(0, Math.min(100, parseInt(volumePercent, 10)));
     this.musicVolume = vol;
-    localStorage.setItem("llamaditas_music_vol", vol.toString());
+    clearTimeout(this.musicVolumePersistTimer);
+    this.musicVolumePersistTimer = setTimeout(() => {
+      localStorage.setItem("llamaditas_music_vol", this.musicVolume.toString());
+    }, 250);
     
-    if (window.ytSync && window.ytSync.player) {
+    if (window.ytSync?.player && typeof window.ytSync.player.setVolume === "function") {
        const linear = vol / 100;
        const logVol = linear === 0 ? 0 : Math.round(Math.pow(linear, 2) * 100);
        window.ytSync.player.setVolume(logVol);

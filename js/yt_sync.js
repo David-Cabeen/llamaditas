@@ -10,6 +10,7 @@ class YouTubeSyncEngine {
     this.syncSender = null; 
     this.isSyncing = false;
     this.progressInterval = null;
+    this.queueInteractionsBound = false;
     this.pendingVideoId = null;
     this.pendingStartTime = 0;
   }
@@ -503,6 +504,7 @@ class YouTubeSyncEngine {
     const countEl = document.getElementById("queue-count-badge");
     if (countEl) countEl.innerText = this.queue.length;
     if (!listEl) return;
+    this.bindQueueInteractions(listEl);
 
     if (this.queue.length === 0) {
       listEl.innerHTML = `
@@ -538,16 +540,33 @@ class YouTubeSyncEngine {
         </div>
       `;
 
-      row.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", index); row.classList.add("dragging"); });
-      row.addEventListener("dragend", () => { row.classList.remove("dragging"); });
-      row.addEventListener("dragover", (e) => { e.preventDefault(); });
-      row.addEventListener("drop", (e) => {
-        e.preventDefault();
-        const fromIdx = parseInt(e.dataTransfer.getData("text/plain"), 10);
-        const toIdx = index;
-        if (!isNaN(fromIdx) && fromIdx !== toIdx) this.reorderTrack(fromIdx, toIdx);
-      });
       listEl.appendChild(row);
+    });
+  }
+
+  bindQueueInteractions(listEl) {
+    if (this.queueInteractionsBound) return;
+    this.queueInteractionsBound = true;
+
+    listEl.addEventListener("dragstart", (event) => {
+      const row = event.target.closest("[data-index]");
+      if (!row) return;
+      event.dataTransfer.setData("text/plain", row.dataset.index);
+      row.classList.add("dragging");
+    });
+    listEl.addEventListener("dragend", (event) => {
+      event.target.closest("[data-index]")?.classList.remove("dragging");
+    });
+    listEl.addEventListener("dragover", (event) => {
+      if (event.target.closest("[data-index]")) event.preventDefault();
+    });
+    listEl.addEventListener("drop", (event) => {
+      const row = event.target.closest("[data-index]");
+      if (!row) return;
+      event.preventDefault();
+      const fromIndex = Number.parseInt(event.dataTransfer.getData("text/plain"), 10);
+      const toIndex = Number.parseInt(row.dataset.index, 10);
+      if (!Number.isNaN(fromIndex) && fromIndex !== toIndex) this.reorderTrack(fromIndex, toIndex);
     });
   }
 
