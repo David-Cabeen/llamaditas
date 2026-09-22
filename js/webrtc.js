@@ -82,12 +82,17 @@ class WebRTCManager {
   }
 
   async initLocalMedia(cameraDefaultOn = false) {
-    const mobileVideoConstraints = this.videoConstraints;
+    const videoConstraints = cameraDefaultOn ? this.videoConstraints : false;
 
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({ video: mobileVideoConstraints, audio: this.getAudioConstraints() });
+      this.localStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: this.getAudioConstraints() });
     } catch (err) {
-      console.warn("[WebRTC] Primary camera constraints rejected. Fallback to default video:", err);
+      if (!cameraDefaultOn) {
+        console.error("[WebRTC] Audio acquisition rejected:", err);
+        throw err;
+      }
+
+      console.warn("[WebRTC] Primary camera constraints rejected. Falling back to default video:", err);
       try {
         this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: this.getAudioConstraints() });
       } catch (err2) {
@@ -99,13 +104,6 @@ class WebRTCManager {
           throw err3;
         }
       }
-    }
-
-    if (!cameraDefaultOn && this.localStream) {
-      this.localStream.getVideoTracks().forEach(track => {
-        track.stop();
-        this.localStream.removeTrack(track);
-      });
     }
 
     if (this.isMonitoring && window.audioMixer) {
