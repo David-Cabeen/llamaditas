@@ -309,9 +309,6 @@
         </div>
       </div>
       <div class="flex items-center justify-between px-4">
-        <button onclick="window.ytSync.shuffleQueue()" class="p-2 text-gray-400 hover:text-white transition" title="Mezclar cola" aria-label="Mezclar cola">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h3c4.5 0 5.5 10 10 10h3m0 0l-3-3m3 3l-3 3M4 17h3c1.5 0 2.6-1.2 3.3-2.6M17 7h3m0 0l-3-3m3 3l-3 3M10.3 9.6C9.7 8.2 8.7 7 7 7H4"/></svg>
-        </button>
         <button onclick="window.ytSync.skipPrev()" class="p-2 text-gray-400 hover:text-white transition">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.334 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"/></svg>
         </button>
@@ -322,11 +319,13 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"/></svg>
         </button>
       </div>
-      <div class="bg-black/30 rounded-xl p-3 border border-white/5 flex items-center justify-between gap-3">
-        <span class="text-xs text-gray-300 font-medium">Volumen música:</span>
-        <div class="flex items-center gap-2 flex-1 max-w-[160px]">
+      <div class="volume-control flex items-center gap-3 px-1">
+        <button onclick="window.ytSync.shuffleQueue()" class="p-2 text-gray-400 hover:text-white transition flex-shrink-0" title="Mezclar cola" aria-label="Mezclar cola">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h3c4.5 0 5.5 10 10 10h3m0 0l-3-3m3 3l-3 3M4 17h3c1.5 0 2.6-1.2 3.3-2.6M17 7h3m0 0l-3-3m3 3l-3 3M10.3 9.6C9.7 8.2 8.7 7 7 7H4"/></svg>
+        </button>
+        <div class="volume-slider-wrap flex-1">
           <input type="range" id="deck-music-vol-slider" min="0" max="100" value="70" oninput="window.llamaditasApp.onMusicVolumeSlider(this.value)" class="w-full">
-          <span id="deck-music-vol-val" class="text-xs font-mono text-gray-300 w-8 text-right">70%</span>
+          <span id="deck-music-vol-val" class="volume-value" aria-hidden="true">70%</span>
         </div>
       </div>
       <div class="flex gap-2">
@@ -339,7 +338,7 @@
         <div class="flex items-center justify-between text-xs text-gray-400">
           <span class="font-semibold uppercase text-[10px] tracking-wider text-gray-300">Siguiente en la cola (<span id="queue-count-badge">0</span>)</span>
         </div>
-        <div id="queue-items-container" class="space-y-2 overflow-y-auto max-h-[180px] pr-1"></div>
+        <div id="queue-items-container" class="space-y-2 overflow-y-auto min-h-0 flex-1 pr-1"></div>
       </div>
     </div>
   </aside>

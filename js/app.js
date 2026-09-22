@@ -653,7 +653,10 @@ class LlamaditasApp {
     if (disp) disp.innerText = `${val}%`;
 
     const deckDisp = document.getElementById("deck-music-vol-val");
-    if (deckDisp) deckDisp.innerText = `${val}%`;
+    if (deckDisp) {
+      deckDisp.innerText = `${val}%`;
+      deckDisp.style.left = `${val}%`;
+    }
 
     const deckSlider = document.getElementById("deck-music-vol-slider");
     if (deckSlider) deckSlider.value = val;
