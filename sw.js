@@ -2,7 +2,7 @@ const CACHE_NAME = "llamaditas-pwa-3d997346b661";
 const ASSETS = [
   "./",
   "./index.html",
-  "./css/app.9cada064b425.css",
+  "./css/app.58a879c12fdb.css",
   "./js/app.3d997346b661.js",
   "./manifest.json"
 ];

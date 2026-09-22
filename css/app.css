@@ -301,6 +301,17 @@ input[type=range]::-webkit-slider-thumb:hover {
 #call-screen { flex: 1 1 auto; }
 #call-workspace { flex: 1 1 0%; height: auto; }
 #youtube-slide-drawer { will-change: transform; }
+#youtube-slide-drawer {
+  background: rgba(18, 20, 29, 0.98);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  contain: layout paint;
+}
+#youtube-drawer-backdrop {
+  background: rgba(0, 0, 0, 0.68);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 #deck-active-card { min-height: 0; }
 #queue-items-container {
   height: 0;
