@@ -160,7 +160,10 @@ class WebRTCManager {
 
     pc.oniceconnectionstatechange = () => {
       if (this.onConnectionQuality) this.onConnectionQuality(peerId, pc.iceConnectionState);
-      if (pc.iceConnectionState === "failed") pc.restartIce();
+      // Reiniciar ICE no solo al fallar, sino al desconectarse parcialmente para asegurar fluidez
+      if (pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+          pc.restartIce();
+      }
     };
 
     this.peers.set(peerId, peerData);
@@ -319,7 +322,17 @@ class WebRTCManager {
       }
 
       try {
-        this.screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        // Establecer constraints para optimizar conectividad y fluidez
+        const screenConstraints = {
+          video: {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 15, max: 30 }
+          },
+          audio: true
+        };
+        
+        this.screenStream = await navigator.mediaDevices.getDisplayMedia(screenConstraints);
         const screenVideoTrack = this.screenStream.getVideoTracks()[0];
         if (!screenVideoTrack) return false;
         this._screenTrackId = screenVideoTrack.id;

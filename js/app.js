@@ -499,9 +499,46 @@ class LlamaditasApp {
       `;
   }
 
+  // Vincular eventos PiP para ocultar el recuadro de la vista y adaptar el layout
+  bindPiPEvents(vidElement, tileElement) {
+    if (!vidElement || !tileElement || vidElement.dataset.pipBound) return;
+    vidElement.dataset.pipBound = "true";
+    vidElement.addEventListener('enterpictureinpicture', () => {
+      tileElement.style.display = 'none';
+      this.recalculateGrid();
+    });
+    vidElement.addEventListener('leavepictureinpicture', () => {
+      tileElement.style.display = '';
+      this.recalculateGrid();
+    });
+  }
+
+  // Función para recalcular dinámicamente las variables de grilla excluyendo a los que estén en PiP
+  recalculateGrid() {
+    const remoteContainer = document.getElementById("remote-video-container");
+    if (!remoteContainer) return;
+    
+    // Contamos cuantos están visibles (excluyendo los escondidos por el Picture in Picture)
+    const visibleTiles = Array.from(remoteContainer.children).filter(c => 
+      c.style.display !== 'none' && (c.classList.contains('video-tile') || c.classList.contains('camera-invite'))
+    );
+    const cameraCount = visibleTiles.length;
+    
+    if (cameraCount === 0) return;
+    const columns = cameraCount === 1 ? 1 : Math.ceil(Math.sqrt(cameraCount));
+    const mobileColumns = Math.min(columns, 2);
+    
+    remoteContainer.dataset.cameraCount = String(cameraCount);
+    remoteContainer.style.setProperty("--camera-columns", columns);
+    remoteContainer.style.setProperty("--camera-rows", Math.ceil(cameraCount / columns));
+    remoteContainer.style.setProperty("--camera-mobile-columns", mobileColumns);
+    remoteContainer.style.setProperty("--camera-mobile-rows", Math.ceil(cameraCount / mobileColumns));
+  }
+
   renderVideoTiles() {
     const remoteContainer = document.getElementById("remote-video-container");
     const screenshareSidebar = document.getElementById("screenshare-sidebar");
+    const cinemaSidebar = document.getElementById("cinema-sidebar");
     const screenshareMain = document.getElementById("screenshare-main");
     const peersList = Array.from(this.remotePeers.entries());
     const localData = { cam: this.isCamOn, username: this.username, avatar_url: this.avatarUrl, name: "Tú" };
@@ -531,18 +568,9 @@ class LlamaditasApp {
       }
     }
 
-    if (remoteContainer) {
-      remoteContainer.innerHTML = "";
-      const cameraCount = peersList.length + 1;
-      const columns = cameraCount === 1 ? 1 : Math.ceil(Math.sqrt(cameraCount));
-      const mobileColumns = Math.min(columns, 2);
-      remoteContainer.dataset.cameraCount = String(cameraCount);
-      remoteContainer.style.setProperty("--camera-columns", columns);
-      remoteContainer.style.setProperty("--camera-rows", Math.ceil(cameraCount / columns));
-      remoteContainer.style.setProperty("--camera-mobile-columns", mobileColumns);
-      remoteContainer.style.setProperty("--camera-mobile-rows", Math.ceil(cameraCount / mobileColumns));
-    }
+    if (remoteContainer) remoteContainer.innerHTML = "";
     if (screenshareSidebar) screenshareSidebar.innerHTML = "";
+    if (cinemaSidebar) cinemaSidebar.innerHTML = "";
 
     if (remoteContainer) {
       const tile = document.createElement("div");
@@ -552,7 +580,10 @@ class LlamaditasApp {
       remoteContainer.appendChild(tile);
       this.renderCamOffPlaceholder(document.getElementById(`studio-cam-off-local`), this.avatarUrl, `studio-cam-local`);
       const vid = document.getElementById(`studio-video-stream-local`);
-      if (vid && window.webrtcManager.localStream) vid.srcObject = window.webrtcManager.localStream;
+      if (vid && window.webrtcManager.localStream) {
+        vid.srcObject = window.webrtcManager.localStream;
+        this.bindPiPEvents(vid, tile);
+      }
       
       if (peersList.length === 0) {
           const inviteTile = document.createElement("div");
@@ -580,7 +611,24 @@ class LlamaditasApp {
       screenshareSidebar.appendChild(sideTile);
       this.renderCamOffPlaceholder(document.getElementById(`screen-cam-off-local`), this.avatarUrl, `screen-cam-local`);
       const vid = document.getElementById(`screen-video-stream-local`);
-      if (vid && window.webrtcManager.localStream) vid.srcObject = window.webrtcManager.localStream;
+      if (vid && window.webrtcManager.localStream) {
+        vid.srcObject = window.webrtcManager.localStream;
+        this.bindPiPEvents(vid, sideTile);
+      }
+    }
+
+    if (cinemaSidebar) {
+      const sideTile = document.createElement("div");
+      sideTile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[220px]";
+      sideTile.id = `cinema-peer-tile-local`;
+      sideTile.innerHTML = this.generateTileHTML("local", localData, true, "cinema");
+      cinemaSidebar.appendChild(sideTile);
+      this.renderCamOffPlaceholder(document.getElementById(`cinema-cam-off-local`), this.avatarUrl, `cinema-cam-local`);
+      const vid = document.getElementById(`cinema-video-stream-local`);
+      if (vid && window.webrtcManager.localStream) {
+        vid.srcObject = window.webrtcManager.localStream;
+        this.bindPiPEvents(vid, sideTile);
+      }
     }
 
     peersList.forEach(([peerId, p]) => {
@@ -593,8 +641,11 @@ class LlamaditasApp {
           this.renderCamOffPlaceholder(document.getElementById(`studio-cam-off-${peerId}`), p.avatar_url, `studio-cam-${peerId}`);
           if (p.stream) {
               const vid = document.getElementById(`studio-video-stream-${peerId}`);
-              vid.srcObject = p.stream;
-              vid.play().catch(e=>console.warn(e));
+              if (vid) {
+                vid.srcObject = p.stream;
+                vid.play().catch(e=>console.warn(e));
+                this.bindPiPEvents(vid, tile);
+              }
           }
       }
       if (screenshareSidebar) {
@@ -606,11 +657,32 @@ class LlamaditasApp {
           this.renderCamOffPlaceholder(document.getElementById(`screen-cam-off-${peerId}`), p.avatar_url, `screen-cam-${peerId}`);
           if (p.stream) {
               const vid = document.getElementById(`screen-video-stream-${peerId}`);
-              vid.srcObject = p.stream;
-              vid.play().catch(e=>console.warn(e));
+              if (vid) {
+                vid.srcObject = p.stream;
+                vid.play().catch(e=>console.warn(e));
+                this.bindPiPEvents(vid, sideTile);
+              }
+          }
+      }
+      if (cinemaSidebar) {
+          const sideTile = document.createElement("div");
+          sideTile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[220px]";
+          sideTile.id = `cinema-peer-tile-${peerId}`;
+          sideTile.innerHTML = this.generateTileHTML(peerId, p, false, "cinema");
+          cinemaSidebar.appendChild(sideTile);
+          this.renderCamOffPlaceholder(document.getElementById(`cinema-cam-off-${peerId}`), p.avatar_url, `cinema-cam-${peerId}`);
+          if (p.stream) {
+              const vid = document.getElementById(`cinema-video-stream-${peerId}`);
+              if (vid) {
+                vid.srcObject = p.stream;
+                vid.play().catch(e=>console.warn(e));
+                this.bindPiPEvents(vid, sideTile);
+              }
           }
       }
     });
+
+    this.recalculateGrid();
   }
 
   renderMixerChannels() {
@@ -681,8 +753,10 @@ class LlamaditasApp {
     window.audioMixer.setPeerVolume(peerId, val);
     const overlayS = document.getElementById(`studio-overlay-vol-${peerId}`);
     const overlaySc = document.getElementById(`screen-overlay-vol-${peerId}`);
+    const overlayC = document.getElementById(`cinema-overlay-vol-${peerId}`);
     if (overlayS) overlayS.innerText = `${val}%`;
     if (overlaySc) overlaySc.innerText = `${val}%`;
+    if (overlayC) overlayC.innerText = `${val}%`;
     const mixerDisp = document.getElementById(`mixer-disp-peer-vol-${peerId}`);
     if (mixerDisp) mixerDisp.innerText = `${val}%`;
   }
@@ -801,11 +875,13 @@ class LlamaditasApp {
         p.cam = cam;
         const vidEls = [
             document.getElementById(`studio-video-stream-${from}`),
-            document.getElementById(`screen-video-stream-${from}`)
+            document.getElementById(`screen-video-stream-${from}`),
+            document.getElementById(`cinema-video-stream-${from}`)
         ];
         const offEls = [
             document.getElementById(`studio-cam-off-${from}`),
-            document.getElementById(`screen-cam-off-${from}`)
+            document.getElementById(`screen-cam-off-${from}`),
+            document.getElementById(`cinema-cam-off-${from}`)
         ];
         
         for (let i = 0; i < vidEls.length; i++) {
@@ -826,8 +902,8 @@ class LlamaditasApp {
   }
 
   updatePeerSpeakingState(peerId, isSpeaking) {
-    const tileIds = [`peer-tile-${peerId}`, `screen-peer-tile-${peerId}`];
-    const badgeIds = [`studio-speaking-badge-${peerId}`, `screen-speaking-badge-${peerId}`];
+    const tileIds = [`peer-tile-${peerId}`, `screen-peer-tile-${peerId}`, `cinema-peer-tile-${peerId}`];
+    const badgeIds = [`studio-speaking-badge-${peerId}`, `screen-speaking-badge-${peerId}`, `cinema-speaking-badge-${peerId}`];
     
     tileIds.forEach(id => {
       const tile = document.getElementById(id);
