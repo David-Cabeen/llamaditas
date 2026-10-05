@@ -208,7 +208,8 @@
         </div>
 
         <div id="layout-screenshare" class="view-panel hidden flex-1 flex flex-col sm:flex-row gap-3 sm:gap-4 h-full min-h-[350px]">
-          <div class="w-full sm:w-64 lg:w-80 flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-y-auto custom-scrollbar bg-black/40 p-2 sm:p-3 rounded-2xl border border-white/10">
+          <!-- Se agregó flex-shrink-0 a la barra lateral -->
+          <div class="w-full sm:w-64 lg:w-80 flex-shrink-0 flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-y-auto custom-scrollbar bg-black/40 p-2 sm:p-3 rounded-2xl border border-white/10">
             <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1 hidden sm:block">Miembros</div>
             <div id="screenshare-sidebar" class="flex sm:flex-col gap-2 sm:gap-3 flex-1 w-full"></div>
           </div>
@@ -232,7 +233,8 @@
         </div>
 
         <div id="layout-cinema" class="view-panel hidden flex-1 flex flex-col sm:flex-row gap-3 sm:gap-4 h-full min-h-[350px]">
-          <div class="w-full sm:w-64 lg:w-80 flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-y-auto custom-scrollbar bg-black/40 p-2 sm:p-3 rounded-2xl border border-white/10">
+          <!-- Se agregó flex-shrink-0 a la barra lateral -->
+          <div class="w-full sm:w-64 lg:w-80 flex-shrink-0 flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-y-auto custom-scrollbar bg-black/40 p-2 sm:p-3 rounded-2xl border border-white/10">
             <div class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 px-1 hidden sm:block">Miembros</div>
             <div id="cinema-sidebar" class="flex sm:flex-col gap-2 sm:gap-3 flex-1 w-full"></div>
           </div>

@@ -499,7 +499,6 @@ class LlamaditasApp {
       `;
   }
 
-  // Vincular eventos PiP para ocultar el recuadro de la vista y adaptar el layout
   bindPiPEvents(vidElement, tileElement) {
     if (!vidElement || !tileElement || vidElement.dataset.pipBound) return;
     vidElement.dataset.pipBound = "true";
@@ -513,12 +512,10 @@ class LlamaditasApp {
     });
   }
 
-  // Función para recalcular dinámicamente las variables de grilla excluyendo a los que estén en PiP
   recalculateGrid() {
     const remoteContainer = document.getElementById("remote-video-container");
     if (!remoteContainer) return;
     
-    // Contamos cuantos están visibles (excluyendo los escondidos por el Picture in Picture)
     const visibleTiles = Array.from(remoteContainer.children).filter(c => 
       c.style.display !== 'none' && (c.classList.contains('video-tile') || c.classList.contains('camera-invite'))
     );
@@ -542,6 +539,9 @@ class LlamaditasApp {
     const screenshareMain = document.getElementById("screenshare-main");
     const peersList = Array.from(this.remotePeers.entries());
     const localData = { cam: this.isCamOn, username: this.username, avatar_url: this.avatarUrl, name: "Tú" };
+
+    // CLASE BASE CON ANCHO FIJO PARA PREVENIR QUE FLEXBOX LAS APLASTE
+    const sidebarTileClass = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[200px] sm:min-h-[220px] w-[240px] sm:w-full flex-shrink-0";
 
     if (screenshareMain) {
       screenshareMain.innerHTML = `
@@ -605,7 +605,7 @@ class LlamaditasApp {
 
     if (screenshareSidebar) {
       const sideTile = document.createElement("div");
-      sideTile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[220px]";
+      sideTile.className = sidebarTileClass;
       sideTile.id = `screen-peer-tile-local`;
       sideTile.innerHTML = this.generateTileHTML("local", localData, true, "screen");
       screenshareSidebar.appendChild(sideTile);
@@ -619,7 +619,7 @@ class LlamaditasApp {
 
     if (cinemaSidebar) {
       const sideTile = document.createElement("div");
-      sideTile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[220px]";
+      sideTile.className = sidebarTileClass;
       sideTile.id = `cinema-peer-tile-local`;
       sideTile.innerHTML = this.generateTileHTML("local", localData, true, "cinema");
       cinemaSidebar.appendChild(sideTile);
@@ -650,7 +650,7 @@ class LlamaditasApp {
       }
       if (screenshareSidebar) {
           const sideTile = document.createElement("div");
-          sideTile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[220px]";
+          sideTile.className = sidebarTileClass;
           sideTile.id = `screen-peer-tile-${peerId}`;
           sideTile.innerHTML = this.generateTileHTML(peerId, p, false, "screen");
           screenshareSidebar.appendChild(sideTile);
@@ -666,7 +666,7 @@ class LlamaditasApp {
       }
       if (cinemaSidebar) {
           const sideTile = document.createElement("div");
-          sideTile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[220px]";
+          sideTile.className = sidebarTileClass;
           sideTile.id = `cinema-peer-tile-${peerId}`;
           sideTile.innerHTML = this.generateTileHTML(peerId, p, false, "cinema");
           cinemaSidebar.appendChild(sideTile);
