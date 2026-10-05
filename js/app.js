@@ -540,8 +540,7 @@ class LlamaditasApp {
     const peersList = Array.from(this.remotePeers.entries());
     const localData = { cam: this.isCamOn, username: this.username, avatar_url: this.avatarUrl, name: "Tú" };
 
-    // CLASE BASE CON ANCHO Y ALTURA ESTÁNDAR PARA EVITAR PROBLEMAS CON LA PURGA DEL COMPILADOR JIT
-    const sidebarTileClass = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group min-h-[220px] w-64 sm:w-full flex-shrink-0";
+    const sidebarTileClass = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group aspect-video w-full flex-shrink-0 mx-auto";
 
     if (screenshareMain) {
       screenshareMain.innerHTML = `
