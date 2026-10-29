@@ -438,13 +438,22 @@ class LlamaditasApp {
   }
 
   handleRemoteStream(peerId, stream, info, isScreen) {
-    const peerInfo = this.remotePeers.get(peerId) || info || { name: "Amigo" };
-    if (isScreen) {
-      peerInfo.screenStream = stream;
-      this.setLayout('screenshare'); 
-    } else {
-      peerInfo.stream = stream;
+    let peerInfo = this.remotePeers.get(peerId);
+    if (!peerInfo) {
+      peerInfo = info || { name: "Amigo" };
     }
+
+    if (isScreen) {
+      // Screenshare arrived — set dedicated screenStream and mark flag
+      peerInfo.screenStream = stream;
+      peerInfo.isSharingScreen = true;
+      if (this.currentLayout !== 'screenshare') this.setLayout('screenshare');
+    } else {
+      // Camera track arrived — update ONLY the camera stream, never touch screenStream
+      peerInfo.stream = stream;
+      // Do NOT overwrite isSharingScreen or screenStream here
+    }
+
     this.remotePeers.set(peerId, peerInfo);
     this.renderVideoTiles();
     this.renderMixerChannels();
@@ -458,7 +467,15 @@ class LlamaditasApp {
     if (this.remotePeers.has(peerId)) {
       const p = this.remotePeers.get(peerId);
       p.isSharingScreen = isSharing;
-      if (!isSharing) p.screenStream = null;
+      if (!isSharing) {
+        p.screenStream = null;
+        // Clear the WebRTC-level screen track ID so future camera renegotiations
+        // aren't misidentified as screenshare tracks
+        const peerData = window.webrtcManager?.peers?.get(peerId);
+        if (peerData) {
+          peerData.remoteScreenTrackId = null;
+        }
+      }
       this.remotePeers.set(peerId, p);
       
       if (isSharing && this.currentLayout !== 'screenshare') {
@@ -605,7 +622,7 @@ class LlamaditasApp {
          if (activeNameEl) activeNameEl.innerText = "Tu Pantalla";
       } else {
         peersList.forEach(([peerId, p]) => {
-          if (p.isSharingScreen || p.screenStream) {
+          if (p.isSharingScreen && p.screenStream) {
             screenshareMain.innerHTML = `<div class="video-contain"><video autoplay playsinline webkit-playsinline muted></video></div>`;
             screenshareMain.querySelector("video").srcObject = p.screenStream;
             if (activeNameEl) activeNameEl.innerText = `Pantalla de ${p.name || "Amigo"}`;

@@ -1,4 +1,4 @@
-﻿// Llamaditas Supabase Realtime P2P Signaling Engine
+// Llamaditas Supabase Realtime P2P Signaling Engine
 class SupabaseP2P {
   constructor() {
     this.client = null;
@@ -261,14 +261,18 @@ class SupabaseP2P {
     }
   }
 
-  sendScreenShareState(isSharing) {
+  sendScreenState(isSharing, screenTrackId = null) {
     if (this.channel && this.isConnected) {
       this.channel.send({
         type: "broadcast",
         event: "screen-state",
-        payload: { from: this.peerId, isSharing }
+        payload: { from: this.peerId, isSharing, screenTrackId }
       });
     }
+  }
+
+  sendScreenShareState(isSharing, screenTrackId = null) {
+    this.sendScreenState(isSharing, screenTrackId);
   }
 
   leave() {
