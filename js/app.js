@@ -1,4 +1,4 @@
-﻿// Llamaditas Application Coordinator (Supabase Serverless P2P, Mobile PWA & Clean UI)
+// Llamaditas Application Coordinator (Supabase Serverless P2P, Mobile PWA & Clean UI)
 class LlamaditasApp {
   constructor() {
     this.roomId = null;
@@ -190,16 +190,38 @@ class LlamaditasApp {
     const videoFeeds = document.querySelectorAll("[id$='video-stream-local']");
     
     if (this.isCamOn) {
-        placeholders.forEach(p => { p.style.opacity = "0"; setTimeout(() => p.classList.add("hidden"), 300); });
-        videoFeeds.forEach(v => v.classList.remove("opacity-0"));
+      const displayStream = window.webrtcManager.getLocalDisplayStream();
+      videoFeeds.forEach(v => {
+        if (!v.srcObject || v.srcObject !== displayStream) {
+          v.srcObject = displayStream;
+        }
+        v.classList.add("stream-mirrored");
+        v.play().catch(e => console.warn(e));
+        v.classList.remove("opacity-0");
+        v.classList.add("opacity-100");
+      });
+      placeholders.forEach(p => {
+        p.style.opacity = "0";
+        p.classList.add("hidden");
+      });
     } else {
-        placeholders.forEach(p => { p.classList.remove("hidden"); p.style.opacity = "1"; this.renderCamOffPlaceholder(p, this.avatarUrl, `local-cam-${p.id}`); });
-        videoFeeds.forEach(v => v.classList.add("opacity-0"));
+      placeholders.forEach(p => {
+        p.classList.remove("hidden");
+        p.style.opacity = "1";
+        p.style.backgroundColor = "#090a10";
+        this.renderCamOffPlaceholder(p, this.avatarUrl, `local-cam-${p.id}`);
+      });
+      videoFeeds.forEach(v => {
+        v.classList.remove("opacity-100");
+        v.classList.add("opacity-0");
+      });
     }
   }
 
   renderCamOffPlaceholder(container, avatar, idPrefix) {
     if (!container) return;
+    container.style.backgroundColor = "#090a10";
+    container.style.opacity = "1";
     if (avatar) {
       container.innerHTML = `
         <img src="${avatar}" id="${idPrefix}-img" class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-2xl border-2 border-white/20 mb-3" crossorigin="anonymous">
@@ -207,7 +229,6 @@ class LlamaditasApp {
       `;
       this.extractProminentColor(avatar, container.id);
     } else {
-      container.style.backgroundColor = "#000000";
       container.innerHTML = `
         ${this.getGuestAvatarMarkup("w-16 h-16 sm:w-20 sm:h-20", "w-8 h-8 sm:w-10 sm:h-10", "mb-3")}
         <p class="text-xs sm:text-sm font-semibold text-white">Cámara desactivada</p>
@@ -236,7 +257,10 @@ class LlamaditasApp {
         for(let i=0; i<data.length; i+=32) { r += data[i]; g += data[i+1]; b += data[i+2]; count++; }
         r = Math.floor(r/count); g = Math.floor(g/count); b = Math.floor(b/count);
         const el = document.getElementById(containerId);
-        if (el) el.style.backgroundColor = `rgba(${r},${g},${b}, 0.5)`;
+        if (el) {
+          el.style.backgroundColor = '#090a10';
+          el.style.backgroundImage = `radial-gradient(circle at center, rgba(${r},${g},${b},0.35) 0%, #090a10 75%)`;
+        }
       } catch(e) {}
     };
     img.src = imgSrc;
@@ -454,24 +478,32 @@ class LlamaditasApp {
       const nameText = isLocal ? `${this.userName} (Tú)` : (p.name || "Amigo");
       const usernameDisplay = p.username ? `<span class="text-[9px] text-gray-400 leading-none pb-0.5">@${p.username}</span>` : '';
       
+      const pipBtn = `
+        <button onclick="window.llamaditasApp.togglePiP('${peerId}', '${layoutPrefix}')" title="${isLocal ? 'Ventana flotante PiP (Espejada)' : 'Ventana flotante PiP'}" class="p-1 hover:text-white text-gray-400 hover:bg-white/10 rounded-lg transition flex items-center justify-center">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        </button>
+      `;
+
       const volControl = isLocal ? `
-          <div class="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[10px] sm:text-xs text-gray-300">
-            <span class="text-[10px] sm:text-[11px] hidden xs:inline">Micrófono:</span>
-            <div class="w-10 sm:w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div class="flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/10 text-[10px] sm:text-xs text-gray-300">
+            <span class="text-[10px] sm:text-[11px] hidden xs:inline">Mic:</span>
+            <div class="w-8 sm:w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div class="local-mic-level-bar h-full bg-accent w-0 transition-all duration-75"></div>
             </div>
+            ${pipBtn}
           </div>
       ` : `
-          <div class="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2 py-1 sm:px-3 sm:py-1.5 rounded-full border border-white/10">
+          <div class="flex items-center gap-1 sm:gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
             <svg class="w-3.5 h-3.5 custom-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
-            <input type="range" min="0" max="150" value="${vol}" oninput="window.llamaditasApp.onPeerVolumeSlider('${peerId}', this.value)" class="w-14 sm:w-20 cursor-pointer">
-            <span id="${layoutPrefix}-overlay-vol-${peerId}" class="text-[10px] sm:text-[11px] font-mono text-gray-300 w-6 text-right">${vol}%</span>
+            <input type="range" min="0" max="150" value="${vol}" oninput="window.llamaditasApp.onPeerVolumeSlider('${peerId}', this.value)" class="w-12 sm:w-16 cursor-pointer">
+            <span id="${layoutPrefix}-overlay-vol-${peerId}" class="text-[10px] font-mono text-gray-300 w-5 text-right">${vol}%</span>
+            ${pipBtn}
           </div>
       `;
 
       return `
-      <video id="${layoutPrefix}-video-stream-${peerId}" autoplay playsinline webkit-playsinline class="absolute inset-0 w-full h-full object-cover -z-10 transition-opacity duration-300 ${isLocal ? 'local-video-feed' : ''} ${p.cam ? 'opacity-100' : 'opacity-0'}" muted></video>
-      <div id="${layoutPrefix}-cam-off-${peerId}" class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-black transition-opacity duration-500 ${p.cam ? 'opacity-0 hidden' : 'opacity-100'}"></div>
+      <video id="${layoutPrefix}-video-stream-${peerId}" autoplay playsinline webkit-playsinline class="absolute inset-0 w-full h-full object-cover -z-10 transition-opacity duration-300 ${isLocal ? 'local-video-feed stream-mirrored' : ''} ${p.cam ? 'opacity-100' : 'opacity-0'}" muted></video>
+      <div id="${layoutPrefix}-cam-off-${peerId}" class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-[#090a10] z-0 transition-opacity duration-300 ${p.cam ? 'opacity-0 hidden' : 'opacity-100'}"></div>
       
       <div class="flex items-start justify-between z-10 gap-2 w-full">
         <div class="flex items-center gap-1.5 sm:gap-2 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[11px] sm:text-xs">
@@ -497,6 +529,21 @@ class LlamaditasApp {
         <div></div>
       </div>
       `;
+  }
+
+  async togglePiP(peerId, layoutPrefix) {
+    const vid = document.getElementById(`${layoutPrefix}-video-stream-${peerId}`);
+    if (!vid) return;
+    try {
+      if (document.pictureInPictureElement === vid) {
+        await document.exitPictureInPicture();
+      } else if (document.pictureInPictureEnabled) {
+        await vid.requestPictureInPicture();
+      }
+    } catch(err) {
+      console.warn("PiP error:", err);
+      this.showToast("No se pudo activar Picture-in-Picture");
+    }
   }
 
   bindPiPEvents(vidElement, tileElement) {
@@ -540,7 +587,7 @@ class LlamaditasApp {
     const peersList = Array.from(this.remotePeers.entries());
     const localData = { cam: this.isCamOn, username: this.username, avatar_url: this.avatarUrl, name: "Tú" };
 
-    const sidebarTileClass = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 video-tile group aspect-video w-full flex-shrink-0 mx-auto";
+    const sidebarTileClass = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-2.5 sm:p-3 video-tile group aspect-video w-44 sm:w-full flex-shrink-0 mx-auto";
 
     if (screenshareMain) {
       screenshareMain.innerHTML = `
@@ -559,7 +606,7 @@ class LlamaditasApp {
       } else {
         peersList.forEach(([peerId, p]) => {
           if (p.isSharingScreen || p.screenStream) {
-            screenshareMain.innerHTML = `<div class="video-contain"><video autoplay playsinline webkit-playsinline></video></div>`;
+            screenshareMain.innerHTML = `<div class="video-contain"><video autoplay playsinline webkit-playsinline muted></video></div>`;
             screenshareMain.querySelector("video").srcObject = p.screenStream;
             if (activeNameEl) activeNameEl.innerText = `Pantalla de ${p.name || "Amigo"}`;
           }
@@ -571,6 +618,8 @@ class LlamaditasApp {
     if (screenshareSidebar) screenshareSidebar.innerHTML = "";
     if (cinemaSidebar) cinemaSidebar.innerHTML = "";
 
+    const localDisplayStream = window.webrtcManager.getLocalDisplayStream() || window.webrtcManager.localStream;
+
     if (remoteContainer) {
       const tile = document.createElement("div");
       tile.className = "relative rounded-2xl overflow-hidden glass border border-white/10 flex flex-col justify-between p-3 sm:p-4 video-tile group min-h-[260px] sm:min-h-[400px]";
@@ -579,8 +628,10 @@ class LlamaditasApp {
       remoteContainer.appendChild(tile);
       this.renderCamOffPlaceholder(document.getElementById(`studio-cam-off-local`), this.avatarUrl, `studio-cam-local`);
       const vid = document.getElementById(`studio-video-stream-local`);
-      if (vid && window.webrtcManager.localStream) {
-        vid.srcObject = window.webrtcManager.localStream;
+      if (vid && localDisplayStream) {
+        vid.srcObject = localDisplayStream;
+        vid.classList.add("stream-mirrored");
+        if (this.isCamOn) vid.play().catch(e=>console.warn(e));
         this.bindPiPEvents(vid, tile);
       }
       
@@ -610,8 +661,10 @@ class LlamaditasApp {
       screenshareSidebar.appendChild(sideTile);
       this.renderCamOffPlaceholder(document.getElementById(`screen-cam-off-local`), this.avatarUrl, `screen-cam-local`);
       const vid = document.getElementById(`screen-video-stream-local`);
-      if (vid && window.webrtcManager.localStream) {
-        vid.srcObject = window.webrtcManager.localStream;
+      if (vid && localDisplayStream) {
+        vid.srcObject = localDisplayStream;
+        vid.classList.add("stream-mirrored");
+        if (this.isCamOn) vid.play().catch(e=>console.warn(e));
         this.bindPiPEvents(vid, sideTile);
       }
     }
@@ -624,8 +677,10 @@ class LlamaditasApp {
       cinemaSidebar.appendChild(sideTile);
       this.renderCamOffPlaceholder(document.getElementById(`cinema-cam-off-local`), this.avatarUrl, `cinema-cam-local`);
       const vid = document.getElementById(`cinema-video-stream-local`);
-      if (vid && window.webrtcManager.localStream) {
-        vid.srcObject = window.webrtcManager.localStream;
+      if (vid && localDisplayStream) {
+        vid.srcObject = localDisplayStream;
+        vid.classList.add("stream-mirrored");
+        if (this.isCamOn) vid.play().catch(e=>console.warn(e));
         this.bindPiPEvents(vid, sideTile);
       }
     }
@@ -796,9 +851,16 @@ class LlamaditasApp {
 
   async toggleCam() {
     this.isCamOn = !this.isCamOn;
-    const cameraEnabled = await window.webrtcManager.toggleVideo(this.isCamOn);
-    if (this.isCamOn && !cameraEnabled) this.isCamOn = false;
     this.updateCamButtonUI(this.isCamOn);
+
+    const cameraEnabled = await window.webrtcManager.toggleVideo(this.isCamOn);
+    if (this.isCamOn && !cameraEnabled) {
+      this.isCamOn = false;
+      this.updateCamButtonUI(false);
+      this.updateCamPlaceholder();
+      return;
+    }
+
     this.updateCamPlaceholder();
 
     if (this.isUsingSupabase) {

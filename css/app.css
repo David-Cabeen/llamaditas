@@ -1,4 +1,4 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -371,6 +371,22 @@ body.theater-fullscreen #cinema-fullscreen-container {
 .local-video-feed {
   transform: scaleX(-1);
 }
+.local-video-feed.stream-mirrored {
+  transform: none !important;
+}
+
+.aspect-video {
+  aspect-ratio: 16 / 9 !important;
+}
+
+/* Maintain proper aspect ratio for camera tiles in theater and presentation mode */
+#screenshare-sidebar .video-tile,
+#cinema-sidebar .video-tile {
+  aspect-ratio: 16 / 9 !important;
+  width: 100%;
+  max-height: 240px;
+}
+
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -394,4 +410,19 @@ body.theater-fullscreen #cinema-fullscreen-container {
   #mic-selector-container { width: 100%; }
   #mic-selector-container button { width: 100%; }
   #mic-dropdown-menu { width: 100%; left: 0; right: 0; }
+
+  #screenshare-sidebar,
+  #cinema-sidebar {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+    overflow-x: auto;
+  }
+  #screenshare-sidebar .video-tile,
+  #cinema-sidebar .video-tile {
+    width: 160px !important;
+    min-width: 160px !important;
+    aspect-ratio: 16 / 9 !important;
+    flex-shrink: 0;
+  }
 }

@@ -1,4 +1,4 @@
-﻿// Llamaditas Granular Multi-Track Audio Mixer (Web Audio API)
+// Llamaditas Granular Multi-Track Audio Mixer (Web Audio API)
 class AudioMixer {
   constructor() {
     this.audioCtx = null;
@@ -29,12 +29,20 @@ class AudioMixer {
 
   createMixedStream(micStream, screenStream) {
     this.ensureContext();
+    if (this._mixedMicSource) {
+      try { this._mixedMicSource.disconnect(); } catch(e) {}
+      this._mixedMicSource = null;
+    }
+    if (this._mixedScreenSource) {
+      try { this._mixedScreenSource.disconnect(); } catch(e) {}
+      this._mixedScreenSource = null;
+    }
     this.mixedDestination = this.audioCtx.createMediaStreamDestination();
 
     if (micStream && micStream.getAudioTracks().length > 0) {
       try {
-        const micSource = this.audioCtx.createMediaStreamSource(micStream);
-        micSource.connect(this.mixedDestination);
+        this._mixedMicSource = this.audioCtx.createMediaStreamSource(micStream);
+        this._mixedMicSource.connect(this.mixedDestination);
       } catch (e) {
         console.warn("[Mixer] Error adding mic to mix:", e);
       }
@@ -42,8 +50,8 @@ class AudioMixer {
 
     if (screenStream && screenStream.getAudioTracks().length > 0) {
       try {
-        const screenSource = this.audioCtx.createMediaStreamSource(screenStream);
-        screenSource.connect(this.mixedDestination);
+        this._mixedScreenSource = this.audioCtx.createMediaStreamSource(screenStream);
+        this._mixedScreenSource.connect(this.mixedDestination);
       } catch (e) {
         console.warn("[Mixer] Error adding system audio to mix:", e);
       }

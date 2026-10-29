@@ -1,4 +1,4 @@
-﻿// Llamaditas WebRTC Peer-to-Peer Mesh Manager
+// Llamaditas WebRTC Peer-to-Peer Mesh Manager
 const RTC_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -22,6 +22,11 @@ class WebRTCManager {
 
     this.otgMode = false;
     this.isMonitoring = false;
+
+    this._mirroredStream = null;
+    this._mirroredVideoTrack = null;
+    this._rawMirrorVideo = null;
+    this._mirrorAnimId = null;
 
     this.onRemoteTrackAdded = null;
     this.onRemotePeerDisconnected = null;
@@ -128,6 +133,10 @@ class WebRTCManager {
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => { pc.addTrack(track, this.localStream); });
     }
+
+    try {
+      pc.addTransceiver("video", { direction: "sendrecv" });
+    } catch(e) {}
 
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
@@ -261,13 +270,20 @@ class WebRTCManager {
     if (!this.localStream) return false;
 
     if (!enabled) {
+      this.stopLocalMirror();
       this.localStream.getVideoTracks().forEach(track => {
         track.stop();
         this.localStream.removeTrack(track);
       });
       this.peers.forEach(({ pc }) => {
-        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
-        if (sender) sender.replaceTrack(null).catch(() => {});
+        const transceivers = pc.getTransceivers();
+        const vTrans = transceivers.find(t => t.receiver && t.receiver.track && t.receiver.track.kind === "video");
+        if (vTrans && vTrans.sender) {
+          vTrans.sender.replaceTrack(null).catch(() => {});
+        } else {
+          const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+          if (sender) sender.replaceTrack(null).catch(() => {});
+        }
       });
       return true;
     }
@@ -278,13 +294,22 @@ class WebRTCManager {
       if (!videoTrack) return false;
       this.localStream.addTrack(videoTrack);
 
+      // Initialize mirrored stream for local display & PiP
+      this.getLocalDisplayStream();
+
       this.peers.forEach(({ pc }, peerId) => {
-        const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
-        if (sender) {
-          sender.replaceTrack(videoTrack).catch(() => {});
+        const transceivers = pc.getTransceivers();
+        const vTrans = transceivers.find(t => t.receiver && t.receiver.track && t.receiver.track.kind === "video");
+        if (vTrans && vTrans.sender) {
+          vTrans.sender.replaceTrack(videoTrack).catch(() => {});
         } else {
-          pc.addTrack(videoTrack, this.localStream);
-          this.createAndSendOffer(peerId);
+          const sender = pc.getSenders().find(s => s.track && s.track.kind === "video");
+          if (sender) {
+            sender.replaceTrack(videoTrack).catch(() => {});
+          } else {
+            pc.addTrack(videoTrack, this.localStream);
+            this.createAndSendOffer(peerId);
+          }
         }
       });
       return true;
@@ -292,6 +317,87 @@ class WebRTCManager {
       console.warn("[WebRTC] Camera could not be enabled:", err);
       return false;
     }
+  }
+
+  stopLocalMirror() {
+    if (this._mirrorAnimId) {
+      cancelAnimationFrame(this._mirrorAnimId);
+      this._mirrorAnimId = null;
+    }
+    if (this._rawMirrorVideo) {
+      try { this._rawMirrorVideo.srcObject = null; } catch(e) {}
+      this._rawMirrorVideo = null;
+    }
+    if (this._mirroredVideoTrack) {
+      try { this._mirroredVideoTrack.stop(); } catch(e) {}
+      this._mirroredVideoTrack = null;
+    }
+    this._mirroredStream = null;
+  }
+
+  getLocalDisplayStream() {
+    if (!this.localStream || this.localStream.getVideoTracks().length === 0) {
+      return this.localStream;
+    }
+    const videoTrack = this.localStream.getVideoTracks()[0];
+    if (!videoTrack || videoTrack.readyState !== "live") {
+      return this.localStream;
+    }
+
+    if (this._mirroredStream && this._mirroredVideoTrack && this._mirroredVideoTrack.readyState === "live") {
+      return this._mirroredStream;
+    }
+
+    this.stopLocalMirror();
+
+    const rawVideo = document.createElement("video");
+    rawVideo.autoplay = true;
+    rawVideo.playsInline = true;
+    rawVideo.muted = true;
+    rawVideo.srcObject = new MediaStream([videoTrack]);
+    rawVideo.play().catch(() => {});
+    this._rawMirrorVideo = rawVideo;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1280;
+    canvas.height = 720;
+    const ctx = canvas.getContext("2d");
+
+    const draw = () => {
+      if (!videoTrack || videoTrack.readyState !== "live") {
+        return;
+      }
+      if (rawVideo.videoWidth > 0 && rawVideo.videoHeight > 0) {
+        if (canvas.width !== rawVideo.videoWidth || canvas.height !== rawVideo.videoHeight) {
+          canvas.width = rawVideo.videoWidth;
+          canvas.height = rawVideo.videoHeight;
+        }
+        ctx.save();
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(rawVideo, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+      this._mirrorAnimId = requestAnimationFrame(draw);
+    };
+    this._mirrorAnimId = requestAnimationFrame(draw);
+
+    let stream;
+    try {
+      stream = canvas.captureStream(30);
+    } catch(err) {
+      console.warn("[WebRTC] canvas.captureStream error:", err);
+      return this.localStream;
+    }
+
+    this._mirroredStream = stream;
+    this._mirroredVideoTrack = stream.getVideoTracks()[0];
+
+    videoTrack.addEventListener("ended", () => {
+      this.stopLocalMirror();
+    }, { once: true });
+
+    return stream;
   }
 
   async toggleScreenShare() {
@@ -322,14 +428,27 @@ class WebRTCManager {
       }
 
       try {
-        // Establecer constraints para optimizar conectividad y fluidez
+        // Pausar YouTube si está reproduciéndose para que no suene en la pantalla compartida
+        if (window.ytSync && window.ytSync.isPlaying) {
+          window.ytSync.togglePlayPause();
+          if (window.llamaditasApp) window.llamaditasApp.showToast("Música pausada para compartir pantalla limpiamente");
+        }
+
+        // Establecer constraints para capturar audio de pantalla/sistema sin incluir la llamada
         const screenConstraints = {
           video: {
             width: { ideal: 1280, max: 1920 },
             height: { ideal: 720, max: 1080 },
             frameRate: { ideal: 15, max: 30 }
           },
-          audio: true
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: false,
+            suppressLocalAudioPlayback: false
+          },
+          selfBrowserSurface: "exclude",
+          systemAudio: "include"
         };
         
         this.screenStream = await navigator.mediaDevices.getDisplayMedia(screenConstraints);
